@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy::window::close_on_esc;
 use bevy::window::PresentMode;
-use level::create_test_scene;
 use level::spawn_camera;
+use level::spawn_lights;
 mod level;
+mod common;
 
 pub const WIDTH : f32 = 600f32;
 pub const HEIGHT : f32 = 400f32;
@@ -17,13 +18,13 @@ fn main()
                     resolution : (WIDTH, HEIGHT).into(),
                     title : "Bevy Project Catan".to_string(),
                     present_mode : PresentMode::AutoVsync,
-                    resizable : false,
+                    resizable : true,
                     ..default()
                 }),
                 ..default()
             }))
         .add_systems(Update, close_on_esc)
-        .add_systems(Startup, create_test_scene) 
+        .add_systems(Startup, spawn_lights) 
         .add_systems(Startup, spawn_camera) 
         .run();  
 }
