@@ -4,7 +4,6 @@ use bevy::window::PresentMode;
 use level::spawn_camera;
 use level::spawn_lights;
 mod level;
-mod common;
 
 pub const WIDTH : f32 = 600f32;
 pub const HEIGHT : f32 = 400f32;
@@ -26,5 +25,5 @@ fn main()
         .add_systems(Update, close_on_esc)
         .add_systems(Startup, spawn_lights) 
         .add_systems(Startup, spawn_camera) 
-        .run();  
+        .run(); 
 }

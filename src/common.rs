@@ -1,3 +1,5 @@
+use bevy::math::Vec3;
+
 #[repr(u8)]
 enum Resources
 {
