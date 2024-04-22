@@ -21,8 +21,15 @@ pub struct Edge
     vertex_to : Vec3,
     neighbours : Vec<i32>
 }
+#[derive(Copy, Clone)]
+pub struct Vertex 
+{
+    has_settlement : bool,
+    is_hex_center : bool,
+    world_coordinates : Vec3
+}
 
-const MAP_HEIGHT : i8 = 2; 
+const MAP_HEIGHT : i8 = 10; 
 const MAP_WIDTH : i8 = 10; 
 
 pub fn spawn_camera(mut command_queue : Commands)
@@ -39,6 +46,17 @@ pub fn spawn_camera(mut command_queue : Commands)
     });
 }
 
+pub fn index_to_grid(i : i8, j : i8) -> Vec3
+{
+    let grid_coords : Vec3 = Vec3::new(
+        i as f32 + f32::floor(j as f32 / 2f32) + (j as f32 % 2f32) + 1f32, 
+        j as f32, 
+        f32::floor(j as f32 / 2f32) - i as f32 + MAP_WIDTH as f32/2f32
+    );
+
+    return grid_coords;
+}
+
 pub fn spawn_lights(mut command_queue : Commands,
     asset_server : Res<AssetServer>,
     mut meshes : ResMut<Assets<Mesh>>
@@ -48,26 +66,33 @@ pub fn spawn_lights(mut command_queue : Commands,
     let hex_radius : f32 = 2.0f32;
     let initial_translation : Vec3 = Transform::from_xyz(-4.0f32, 0.0f32, -2.0f32).translation;
 
-    let cuboid : Handle<Mesh> = meshes.add(Cuboid{
-        half_size : vec3(0.1f32, 0.1f32, 0.1f32), 
-        ..default()
-    });
+    let max_x : i8 = MAP_WIDTH/2 + f32::floor((MAP_HEIGHT as f32/2f32) / 2f32) as i8 + 1;
+    let max_z : i8 = max_x + 1;
+    let max_y : i8 = MAP_HEIGHT/2 + 1;
 
-    let mut edges : Vec<Edge> = Vec::new();
+    let mut vertices : Vec<Vec<Vec<Vertex>>> = 
+        vec![
+            vec![
+                vec![Vertex{has_settlement: false, world_coordinates: Vec3::ZERO, is_hex_center: false}; max_z as usize]; 
+                max_y as usize
+            ]; 
+            max_x as usize
+        ];
 
-    for i in 0..MAP_HEIGHT/2
+    for j in 0..MAP_HEIGHT/2
     {
-        let offset_z : f32 = initial_translation.z + if i % 2 == 0 {hex_radius - 1.0f32} else {0.0f32};
-        let offset_x : f32 = initial_translation.x + (hex_radius - 0.2f32) * i as f32;
-        for j in 0..MAP_WIDTH/2
+        let offset_z : f32 = initial_translation.z + if j % 2 == 0 {hex_radius - 1.0f32} else {0.0f32};
+        let offset_x : f32 = initial_translation.x + (hex_radius - 0.2f32) * j as f32;
+
+        for i in 0..MAP_WIDTH/2
         {
             command_queue.spawn(SceneBundle{
                 scene : hexagon.clone(),
-                transform : Transform::from_xyz(offset_x, initial_translation.y,  offset_z - j as f32 * (hex_radius + 0.15f32)),
+                transform : Transform::from_xyz(offset_x, initial_translation.y,  offset_z - i as f32 * (hex_radius + 0.15f32)),
                 ..default()
             });
             
-            let center : Vec3 = vec3(offset_x, initial_translation.y + 10.0f32, -j as f32 * hex_radius);
+            let center : Vec3 = vec3(offset_x, initial_translation.y,  offset_z - i as f32 * (hex_radius + 0.15f32));
 
             let bottom : Vec3 = center + vec3(hex_radius/1.9f32, 0.0f32, 0.0f32);
             let top : Vec3 = center - vec3(hex_radius/1.9f32, 0.0f32, 0.0f32);
@@ -75,57 +100,19 @@ pub fn spawn_lights(mut command_queue : Commands,
             let top_left : Vec3 = center - vec3(hex_radius * 0.3f32, 0.0f32, -hex_radius/2.0f32);
             let bottom_right : Vec3 = center - vec3(-hex_radius * 0.3f32, 0.0f32, hex_radius/2.0f32);
             let bottom_left : Vec3 = center + vec3(hex_radius * 0.3f32, 0.0f32, hex_radius/2.0f32);
-            
-            let mut top_left_edge  = Edge{vertex_from : top_left, vertex_to : top, ..default()};
-            let mut top_right_edge= Edge{vertex_from : top, vertex_to : top_right, ..default()};
-            let mut right_edge = Edge{vertex_from : top_right, vertex_to : bottom_right, ..default()};
-            let mut bottom_right_edge =Edge{vertex_from : bottom_right, vertex_to : bottom, ..default()};
-            let mut bottom_left_edge = Edge{vertex_from : bottom, vertex_to : bottom_left, ..default()};
-            let mut left_edge= Edge{vertex_from : bottom_left, vertex_to : top_left, ..default()};
 
-            if j == 0
-            {
-                top_left_edge.neighbours.extend([1, 5]);
-                top_right_edge.neighbours.extend([0, 2]);
-                right_edge.neighbours.extend([1, 3]);
-                bottom_right_edge.neighbours.extend([2, 4]);
-                bottom_left_edge.neighbours.extend([3, 5]);
-                left_edge.neighbours.extend([4, 0]);
+            let index_to_grid : Vec3 = index_to_grid(i, j);
+            let x : usize = index_to_grid.x as usize;
+            let y : usize = index_to_grid.y as usize;
+            let z : usize = index_to_grid.z as usize;
 
-                edges.extend([top_left_edge, top_right_edge, right_edge, bottom_right_edge, bottom_left_edge, left_edge]);
-            }
-            else 
-            {
-                let previous_top_right : i32;
-                let previous_right : i32;
-                let previous_bottom_right : i32;
-                let edges_size: i32 = edges.len() as i32;
-
-                if j == 1
-                {
-                    previous_top_right = 1;
-                    previous_right = 2;
-                    previous_bottom_right = 3;
-                }
-                else 
-                {
-                    previous_top_right = edges_size - 4;
-                    previous_right = edges_size - 3;
-                    previous_bottom_right = edges_size - 2;
-                }
-
-                top_left_edge.neighbours.extend([previous_top_right, previous_right, edges_size + 1]);
-                top_right_edge.neighbours.extend([edges_size + 0, edges_size + 2]);
-                right_edge.neighbours.extend([edges_size + 1, edges_size + 3]);
-                bottom_right_edge.neighbours.extend([edges_size + 2, edges_size + 4]);
-                bottom_left_edge.neighbours.extend([edges_size + 3, previous_bottom_right, previous_right]);
-
-                edges[previous_top_right as usize].neighbours.extend([edges_size + 0]);
-                edges[previous_right as usize].neighbours.extend([edges_size + 0, edges_size + 4]);
-                edges[previous_bottom_right as usize].neighbours.extend([edges_size + 4]);
-
-                edges.extend([top_left_edge, top_right_edge, right_edge, bottom_right_edge, bottom_left_edge]);
-            }
+            vertices[x][y][z] = Vertex{has_settlement: false, world_coordinates: center, is_hex_center: true};
+            vertices[x][y + 1][z] = Vertex{has_settlement: false, world_coordinates: bottom, is_hex_center: false};
+            vertices[x - 1][y][z + 1] = Vertex{has_settlement: false, world_coordinates: top, is_hex_center: false};
+            vertices[x][y][z + 1] = Vertex{has_settlement: false, world_coordinates: top_right, is_hex_center: false};
+            vertices[x - 1][y][z] = Vertex{has_settlement: false, world_coordinates: top_left, is_hex_center: false};
+            vertices[x][y + 1][z + 1] = Vertex{has_settlement: false, world_coordinates: bottom_right, is_hex_center: false};
+            vertices[x - 1][y + 1][z] = Vertex{has_settlement: false, world_coordinates: bottom_left, is_hex_center: false};
         }
     }
 
