@@ -1,7 +1,7 @@
 use bevy::asset::{AssetServer, Assets};
 use bevy::core_pipeline::core_3d::Camera3dBundle;
 use bevy::ecs::event::EventReader;
-use bevy::ecs::system::{Commands, Query, ResMut};
+use bevy::ecs::system::{Commands, Query, ResMut, Resource};
 use bevy::input::mouse::MouseMotion;
 use bevy::math::{vec3, Vec3};
 use bevy::pbr::{DirectionalLight, DirectionalLightBundle};
@@ -24,14 +24,20 @@ pub struct Vertex
 const MAP_HEIGHT : i8 = 10; 
 const MAP_WIDTH : i8 = 10; 
 
+#[derive(Resource)]
 pub struct Map
 {
-    vertices : Option<Vec<Vec<Vec<Vertex>>>>
+    vertices : Option<Vec<Vec<Vec<Option<Vertex>>>>>
 }
 
 impl Map 
 {
-    pub fn initialize(&mut self, command_queue : &mut Commands, asset_server : Res<AssetServer>)
+    pub fn create_new() -> Map
+    {
+        Map { vertices: None }
+    }
+
+    pub fn spawn(&mut self, command_queue : &mut Commands, asset_server : Res<AssetServer>)
     {
         let hexagon : bevy::prelude::Handle<Scene> = asset_server.load("Hex.glb#Scene0");
 
@@ -42,10 +48,10 @@ impl Map
         let max_z : i8 = max_x + 1;
         let max_y : i8 = MAP_HEIGHT/2 + 1;
 
-        self.vertices  = Option::Some
+        self.vertices = Some
         (vec![
             vec![
-                vec![Vertex{has_settlement: false, world_coordinates: Vec3::ZERO, is_hex_center: false}; max_z as usize]; 
+                vec![None; max_z as usize]; 
                 max_y as usize
             ]; 
             max_x as usize
@@ -80,18 +86,94 @@ impl Map
                 
                 match self.vertices{
                     Some(ref mut vec) => {
-                        vec[x][y][z] = Vertex{has_settlement: false, world_coordinates: center, is_hex_center: true};
-                        vec[x][y + 1][z] = Vertex{has_settlement: false, world_coordinates: bottom, is_hex_center: false};
-                        vec[x - 1][y][z + 1] = Vertex{has_settlement: false, world_coordinates: top, is_hex_center: false};
-                        vec[x][y][z + 1] = Vertex{has_settlement: false, world_coordinates: top_right, is_hex_center: false};
-                        vec[x - 1][y][z] = Vertex{has_settlement: false, world_coordinates: top_left, is_hex_center: false};
-                        vec[x][y + 1][z + 1] = Vertex{has_settlement: false, world_coordinates: bottom_right, is_hex_center: false};
-                        vec[x - 1][y + 1][z] = Vertex{has_settlement: false, world_coordinates: bottom_left, is_hex_center: false};
+                        match vec[x][y][z] {
+                            Some(_) => (),
+                            None => {
+                               vec[x][y][z] = Some(Vertex{has_settlement: false, world_coordinates: center, is_hex_center: true});
+                            }
+                        };
+                        match vec[x][y + 1][z] {
+                            Some(_) => (),
+                            None => {
+                                vec[x][y + 1][z] = Some(Vertex{has_settlement: false, world_coordinates: bottom, is_hex_center: false});
+                            }
+                        };
+                        match vec[x - 1][y][z + 1] {
+                            Some(_) => (),
+                            None => {
+                                vec[x - 1][y][z + 1] = Some(Vertex{has_settlement: false, world_coordinates: top, is_hex_center: false});
+                            }
+                        };
+                        match vec[x][y][z + 1] {
+                            Some(_) => (),
+                            None => {
+                                vec[x][y][z + 1] = Some(Vertex{has_settlement: false, world_coordinates: top_right, is_hex_center: false});
+                            }
+                        };
+                        match vec[x - 1][y][z] {
+                            Some(_) => (),
+                            None => {
+                                vec[x - 1][y][z] = Some(Vertex{has_settlement: false, world_coordinates: top_left, is_hex_center: false});
+                            }
+                        };
+                        match vec[x][y + 1][z + 1] {
+                            Some(_) => (),
+                            None => {
+                                vec[x][y + 1][z + 1] = Some(Vertex{has_settlement: false, world_coordinates: bottom_right, is_hex_center: false});
+                            }
+                        };
+                        match vec[x - 1][y + 1][z] {
+                            Some(_) => (),
+                            None => {
+                                vec[x - 1][y + 1][z] = Some(Vertex{has_settlement: true, world_coordinates: bottom_left, is_hex_center: false});
+                            }
+                        };
                     },
-                    None => continue,
+                    None => (),
                 }
             }
         }
+    }
+
+    pub fn print_vertices(&self)
+    {
+        match self.vertices {
+            Some(ref vec) => {
+                for i in 0..vec.len() {
+                    for j in 0..vec[i].len()  {
+                        for k in 0..vec[i][j].len()  {
+                            match vec[i][j][k] {
+                                Some(value) => {
+                                    println!("grid coords = ({}, {}, {}), world coords = ({}, {}, {}), has settlement = ({}), is hex center = ({})",
+                                    i, j, k, 
+                                    value.world_coordinates.x, value.world_coordinates.y, value.world_coordinates.z, 
+                                    value.has_settlement, 
+                                    value.is_hex_center);
+                                },
+                                None => ()
+                            }
+                        }
+                    }
+                }
+            },
+            None => return
+        }
+    }
+
+    pub fn test(&self)
+    {
+        match &self.vertices {
+            Some(vec) => {
+                match vec[1][0][5] {
+                    Some(value) => {
+                        println!("{}", value.is_hex_center);
+                        println!("Top left vertex = (x:{}, z:{})", value.world_coordinates.x, value.world_coordinates.z);
+                    },
+                    None =>()
+                }
+            },
+            None => return
+        };
     }
 }
 
@@ -120,12 +202,19 @@ pub fn index_to_grid(i : i8, j : i8) -> Vec3
     return grid_coords;
 }
 
-pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Query<&mut Window>)
+pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Query<&mut Window>, mut map : ResMut<Map>)
 {
     for event in cursor_event.read()
     {
+        map.test();
         println!("Cursor moved! x-{} y-{}", event.position.x - window.single().resolution.width()/2f32, event.position.y - window.single().resolution.height()/2f32)
     }
+}
+
+pub fn initialize_map(mut command_queue : Commands, asset_server : Res<AssetServer>, mut map : ResMut<Map>)
+{
+    map.spawn(&mut command_queue, asset_server);
+    map.print_vertices();
 }
 
 pub fn spawn_lights(mut command_queue : Commands,
@@ -133,12 +222,6 @@ pub fn spawn_lights(mut command_queue : Commands,
     mut meshes : ResMut<Assets<Mesh>>
 )
 {
-    let mut map : Map = Map{
-        vertices : Option::None
-    };
-
-    map.initialize(&mut command_queue, asset_server);
-
     command_queue.spawn(DirectionalLightBundle{
         directional_light : DirectionalLight{
             ..default()
