@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::close_on_esc;
 use bevy::window::PresentMode;
+use level::mouse_moved;
 use level::spawn_camera;
 use level::spawn_lights;
 mod level;
@@ -25,5 +26,6 @@ fn main()
         .add_systems(Update, close_on_esc)
         .add_systems(Startup, spawn_lights) 
         .add_systems(Startup, spawn_camera) 
+        .add_systems(Update, mouse_moved)
         .run(); 
 }
