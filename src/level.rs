@@ -86,12 +86,9 @@ impl Map
                 
                 match self.vertices{
                     Some(ref mut vec) => {
-                        match vec[x][y][z] {
-                            Some(_) => (),
-                            None => {
-                               vec[x][y][z] = Some(Vertex{has_settlement: false, world_coordinates: center, is_hex_center: true});
-                            }
-                        };
+
+                        vec[x][y][z] = Some(Vertex{has_settlement: false, world_coordinates: center, is_hex_center: true});
+                                
                         match vec[x][y + 1][z] {
                             Some(_) => (),
                             None => {
