@@ -35,6 +35,8 @@ const INITIAL_TRANSLATION : Vec3 = Transform::from_xyz(-4.0f32, 0.0f32, 7.0f32).
 const X_BASIS_VECTOR : Vec2 = Vec2::new(-HEX_RADIUS * 0.3f32, -HEX_RADIUS/2.0f32);
 const Z_BASIS_VECTOR : Vec2 = Vec2::new (HEX_RADIUS * 0.3f32, HEX_RADIUS/2.0f32);
 
+const VERTEX_TOO_FAR_AWAY: f32 = 0.5f32;
+
 #[derive(Resource)]
 pub struct Map
 {
@@ -82,10 +84,10 @@ impl Map
     
                 let bottom : Vec3 = center + vec3(HEX_RADIUS/1.9f32, 0.0f32, 0.0f32);
                 let top : Vec3 = center - vec3(HEX_RADIUS/1.9f32, 0.0f32, 0.0f32);
-                let top_right : Vec3 = center + vec3(X_BASIS_VECTOR.x, 0.0f32, -X_BASIS_VECTOR.y);
-                let top_left : Vec3 = center + vec3(X_BASIS_VECTOR.x, 0.0f32, X_BASIS_VECTOR.y);
-                let bottom_right : Vec3 = center + vec3(Z_BASIS_VECTOR.x, 0.0f32, Z_BASIS_VECTOR.y);
-                let bottom_left : Vec3 = center + vec3(Z_BASIS_VECTOR.x, 0.0f32, -Z_BASIS_VECTOR.y);
+                let top_right : Vec3 = center - vec3(-X_BASIS_VECTOR.x, 0.0f32, -X_BASIS_VECTOR.y);
+                let top_left : Vec3 = center - vec3(-X_BASIS_VECTOR.x, 0.0f32, X_BASIS_VECTOR.y);
+                let bottom_right : Vec3 = center + vec3(Z_BASIS_VECTOR.x, 0.0f32, -Z_BASIS_VECTOR.y);
+                let bottom_left : Vec3 = center + vec3(Z_BASIS_VECTOR.x, 0.0f32, Z_BASIS_VECTOR.y);
     
                 let index_to_grid : Vec3 = index_to_grid(i, j);
                 let x : usize = index_to_grid.x as usize;
@@ -103,28 +105,29 @@ impl Map
                                 vec[x][y + 1][z] = Some(Vertex{has_settlement: false, world_coordinates: bottom, is_hex_center: false});
                             }
                         };
-                        match vec[x - 1][y][z + 1] {
+                        match vec[x - 1][y][z - 1] {
                             Some(_) => (),
                             None => {
-                                vec[x - 1][y][z + 1] = Some(Vertex{has_settlement: false, world_coordinates: top, is_hex_center: false});
+                                vec[x - 1][y][z - 1] = Some(Vertex{has_settlement: false, world_coordinates: top, is_hex_center: false});
                             }
                         };
-                        match vec[x][y][z + 1] {
+                        match vec[x][y][z - 1] {
                             Some(_) => (),
                             None => {
-                                vec[x][y][z + 1] = Some(Vertex{has_settlement: false, world_coordinates: top_right, is_hex_center: false});
+                                vec[x][y][z - 1] = Some(Vertex{has_settlement: false, world_coordinates: top_right, is_hex_center: false});
                             }
                         };
                         match vec[x - 1][y][z] {
                             Some(_) => (),
                             None => {
+                                println!("x = {}, x - 1 = {}", x, x-1);
                                 vec[x - 1][y][z] = Some(Vertex{has_settlement: false, world_coordinates: top_left, is_hex_center: false});
                             }
                         };
-                        match vec[x][y + 1][z + 1] {
+                        match vec[x][y + 1][z - 1] {
                             Some(_) => (),
                             None => {
-                                vec[x][y + 1][z + 1] = Some(Vertex{has_settlement: false, world_coordinates: bottom_right, is_hex_center: false});
+                                vec[x][y + 1][z - 1] = Some(Vertex{has_settlement: false, world_coordinates: bottom_right, is_hex_center: false});
                             }
                         };
                         match vec[x - 1][y + 1][z] {
@@ -169,7 +172,7 @@ impl Map
     {
         match &self.vertices {
             Some(vec) => {
-                match vec[1][0][5] {
+                match vec[1][0][6] {
                     Some(value) => {
                         println!("{}", value.is_hex_center);
                         println!("Top left vertex = (x:{}, z:{})", value.world_coordinates.x, value.world_coordinates.z);
@@ -179,6 +182,59 @@ impl Map
             },
             None => return
         };
+    }
+
+    pub fn world_to_index(&self, x : f32, z : f32, select_centers: bool) -> Option<Vec3>
+    {
+        let mut closest_vertex_index: Vec3 = Vec3::new(0f32, 0f32, 0f32);
+        let mut closest_vertex_distance: Option<f32> = None;
+
+        match &self.vertices {
+            Some(vertices) => {
+                for i in 0..vertices.len() 
+                {
+                    for j in 0..vertices[i].len()  
+                    {
+                        for k in 0..vertices[i][j].len() 
+                        {
+                            match vertices[i][j][k] {
+                                Some(vertex) => {
+                                    let vertex_distance: f32 = 
+                                    (vertex.world_coordinates - Vec3::new(x, vertex.world_coordinates.y, z)).length();
+
+                                    match closest_vertex_distance {
+                                        None => {
+                                            closest_vertex_distance = Some(vertex_distance);
+                                            closest_vertex_index = Vec3::new(i as f32, j as f32, k as f32);
+                                        },
+                                        Some(closest_distance) => {
+                                            if vertex_distance < closest_distance 
+                                            {
+                                                closest_vertex_distance = Some(vertex_distance);
+                                                closest_vertex_index = Vec3::new(i as f32, j as f32, k as f32);
+                                            }
+                                        }
+                                    }
+                                },
+                                None => ()
+                            }
+                        }
+                    }
+                }
+
+                match closest_vertex_distance {
+                    Some(closest_distance) => { if closest_distance > VERTEX_TOO_FAR_AWAY {return Option::None;}},
+                    None => ()
+                }
+
+                match vertices[closest_vertex_index.x as usize][closest_vertex_index.y as usize][closest_vertex_index.z as usize] {
+                    Some(vertex) => {if !select_centers && vertex.is_hex_center {return Option::None}},
+                    None => ()
+                }
+                return Option::Some(closest_vertex_index);
+            },
+            None => {return Option::None;}
+        }
     }
 }
 
@@ -207,42 +263,6 @@ pub fn index_to_grid(i : i8, j : i8) -> Vec3
     return grid_coords;
 }
 
-pub fn world_to_index(x : f32, z : f32) -> Option<Vec3>
-{
-    let j: f32 = (x - INITIAL_TRANSLATION.x) / HEX_RADIUS;
-    let index_j: f32 = f32::round(j);
-
-    let i : f32 = ((z - INITIAL_TRANSLATION.z) - if index_j % 2f32 == 0f32 {J_OFFSET} else {0.0f32})/-J_SPACING;
-    let index_i : f32 = f32::round(i);
-
-    let offset_from_center: Vec2 = Vec2::new(i - index_i as f32, j - index_j as f32);
-
-    let mut x_index_offset: f32 = offset_from_center.x;
-    let mut y_index_offset: f32 = offset_from_center.y;
-    let mut z_index_offset: f32 = offset_from_center.x;
-
-    if z_index_offset >= 0.3f32 {z_index_offset = -1.0f32} 
-    else {z_index_offset = 0f32};
-    if offset_from_center.y <= -0.3f32 {z_index_offset = -1f32;}
-
-    if y_index_offset >= 0.1f32 {y_index_offset = 1.0f32}
-    else {y_index_offset = 0f32;}
-
-    if x_index_offset <= -0.3f32 {x_index_offset = -1.0f32} 
-    else {x_index_offset = 0f32};
-    if offset_from_center.y <= -0.3f32 {x_index_offset = -1f32;}
-
-    if (index_i < 0.0f32 || index_i > (MAP_WIDTH/2 - 1) as f32) || 
-    (index_j < 0.0f32 || index_j > (MAP_HEIGHT/2 - 1) as f32)
-    {
-        return Option::None;
-    }
-    else 
-    {
-        return Option::Some(Vec3::new(x_index_offset, y_index_offset, z_index_offset) + index_to_grid(index_i as i8, index_j as i8));
-    }
-}
-
 pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Query<&mut Window>, mut map : ResMut<Map>, 
     camera: Query<(&Camera, &GlobalTransform)>)
 {
@@ -251,7 +271,7 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
         map.test();
         match camera.single().0.viewport_to_world(camera.single().1, event.position) {
             Some(value) => {
-                let index_position : Option<Vec3> = world_to_index(value.origin.x, value.origin.z);
+                let index_position : Option<Vec3> = map.world_to_index(value.origin.x, value.origin.z, false);
                 match index_position {
                     Some(position) => println!("Cursor moved! x: {} y: {} z: {}", position.x, position.y, position.z),
                     None => ()
