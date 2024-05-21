@@ -1,288 +1,219 @@
-use bevy::math::{Vec2, Vec3, vec3};
+use bevy::math::{vec2, vec3, Vec2, Vec3};
 use bevy::ecs::system::{Resource, Res, Commands};
 use bevy::transform::components::Transform;
 use bevy::scene::{Scene, SceneBundle};
-use bevy::asset::AssetServer;
+use bevy::asset::{self, AssetServer};
 use bevy::utils::default;
 
-const MAP_HEIGHT : i8 = 10; 
-const MAP_WIDTH : i8 = 10; 
+const MAP_HEIGHT : i8 = 1; 
+const MAP_WIDTH : i8 = 1; 
 
-const HEX_RADIUS : f32 = 2.0f32;
-const J_OFFSET : f32 = HEX_RADIUS - 0.90f32;
-const J_SPACING : f32 = HEX_RADIUS + 0.22f32;
-const INITIAL_TRANSLATION : Vec3 = Transform::from_xyz(-4.0f32, 0.0f32, 7.0f32).translation;
+const HEX_RADIUS : f32 = 1.0f32;
+const DEFAULT_HEX_SIZE : f32 = 0.2f32;
+const INITIAL_TRANSLATION : Vec3 = Transform::from_xyz(0.0f32, 0.0f32, 0.0f32).translation;
 
-const X_BASIS_VECTOR : Vec2 = Vec2::new(-HEX_RADIUS * 0.3f32, -HEX_RADIUS/2.0f32);
-const Z_BASIS_VECTOR : Vec2 = Vec2::new (HEX_RADIUS * 0.3f32, HEX_RADIUS/2.0f32);
+const HEX_HEIGHT : f32 = (HEX_RADIUS + DEFAULT_HEX_SIZE) * 2f32;
 
-const VERTEX_TOO_FAR_AWAY: f32 = 0.5f32;
+const HORIZONTAL_DISTANCE : f32 = 1.732f32 * (HEX_RADIUS + DEFAULT_HEX_SIZE);
+const VERTICAL_DISTANCE : f32 = 3f32/4f32 * HEX_HEIGHT;
 
 #[derive(Copy, Clone)]
 pub struct Vertex 
 {
-    has_settlement : bool,
-    is_hex_center : bool,
     world_coordinates : Vec3
+}
+
+#[derive(Copy, Clone)]
+pub struct HexVertex 
+{
+    top : Option<Vertex>,
+    bottom : Option<Vertex>
+}
+
+#[derive(Copy, Clone)]
+pub struct Hex
+{
+    center_coordinates : Vec3
 }
 
 #[derive(Resource)]
 pub struct Map
 {
-    vertices : Option<Vec<Vec<Vec<Option<Vertex>>>>>
+    hexes : Option<Vec<Vec<Option<Hex>>>>,
+    vertices : Option<Vec<Vec<HexVertex>>>
 }
 
 impl Map 
 {
     pub fn create_new() -> Map
     {
-        Map { vertices: None }
+        Map 
+        { 
+            hexes: Some(vec![
+                vec![None; (MAP_WIDTH * 2 + 1) as usize]; 
+                (MAP_HEIGHT * 2 + 1) as usize
+            ]),
+            vertices: Some(vec![
+                vec![HexVertex{top : None, bottom : None}; ((MAP_WIDTH * 2 + 1) + 2) as usize];
+                ((MAP_HEIGHT * 2 + 1) + 2) as usize               
+            ])
+        }
     }
 
-    pub fn index_to_grid(i : i8, j : i8) -> Vec3
+    pub fn hexAxialToWorld(q_offset : i8, r_offset : i8) -> Vec3 
     {
-        let grid_coords : Vec3 = Vec3::new(
-            i as f32 + f32::floor(j as f32 / 2f32) + (j as f32 % 2f32) + 1f32, 
-            j as f32, 
-            f32::floor(j as f32 / 2f32) - i as f32 + MAP_WIDTH as f32/2f32
-        );
-
-        return grid_coords;
+        let x_position : f32 = INITIAL_TRANSLATION.x + r_offset as f32 * VERTICAL_DISTANCE;
+        let z_position : f32 = (INITIAL_TRANSLATION.z + q_offset as f32 * HORIZONTAL_DISTANCE) + 
+            r_offset as f32 * (HORIZONTAL_DISTANCE / 2f32);
+        
+        return vec3(x_position, INITIAL_TRANSLATION.y, z_position);
     }
 
-    pub fn spawn(&mut self, command_queue : &mut Commands, asset_server : Res<AssetServer>)
+    pub fn vertexAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, isbottom : bool, ) -> Vec3 
+    {
+        let hex_axial : Vec2 = Self::hexWorldToAxial(center);
+        let vertex_q_offset : i8 = hex_axial.x as i8 - q_offset;
+        let vertex_r_offset : i8 = hex_axial.y as i8 - r_offset;
+
+        let world_position : Vec3 = Self::getCorners(center, 
+            Self::vertexIFromOffset(vertex_q_offset, vertex_r_offset, isbottom));
+        
+        return world_position;
+    }
+
+    pub fn vertexQOffsetFromI(i : i32) -> i8
+    {
+        if i == 0 || i == 3 || i == 2 || i == 5 {
+            return 0;
+        }
+
+        if i % 2 == 0{
+            return 1;
+        }
+        else {
+            return -1;
+        }
+    }
+
+    pub fn vertexIFromOffset(q_offset : i8, r_offset : i8, isbottom : bool) -> i32 
+    {
+        if q_offset == 0 && r_offset == 0 {
+            if isbottom {return  0;}
+            else {return 3;}
+        }
+        else if q_offset == 0 && r_offset != 0 {
+            if isbottom {return 2;}
+            else {return 5;}
+        }
+        else if q_offset == -1 && r_offset == 1 {
+            return 1;
+        }
+        else if q_offset == 1 && r_offset == -1 {
+            return 4;
+        }
+        else{
+            print!("Vertex i value cannot be found!");
+            return -1;
+        }
+    }
+ 
+    pub fn vertexROffsetFromI(i : i32) -> i8
+    {
+        if i == 0 || i == 3 {
+            return 0;
+        }
+
+        if i % 2 == 0{
+            return -1;
+        }
+        else {
+            return 1;
+        }
+    }
+ 
+    pub fn hexWorldToAxial(world : Vec3) -> Vec2
+    {
+        let y_axial : f32 = (world.x - INITIAL_TRANSLATION.x) / VERTICAL_DISTANCE;
+        let x_axial : f32 = (world.z - INITIAL_TRANSLATION.z - y_axial * (HORIZONTAL_DISTANCE / 2f32)) / HORIZONTAL_DISTANCE;
+        return vec2(x_axial, y_axial);
+    }
+
+    pub fn getCorners(center : Vec3, i : i32) -> Vec3
+    {
+        let degree_angle : f32 = 30f32 + (60f32 * i as f32 - 30f32);
+        let rad_angle : f32 = 3.14f32 / 180f32 * degree_angle;
+        let vertex_coord : Vec3 = vec3(
+            center.x + (HEX_RADIUS) * f32::cos(rad_angle), 
+            center.y,
+            center.z + (HEX_RADIUS) * f32::sin(rad_angle));
+        
+        return vertex_coord;
+    }
+
+    pub fn spawn(&mut self, command_queue : &mut Commands, asset_server : Res<AssetServer>) 
     {
         let hexagon : bevy::prelude::Handle<Scene> = asset_server.load("Hex.glb#Scene0");
-    
-        let max_x : i8 = MAP_WIDTH/2 + f32::floor((MAP_HEIGHT as f32/2f32) / 2f32) as i8 + 1;
-        let max_z : i8 = max_x + 1;
-        let max_y : i8 = MAP_HEIGHT/2 + 1;
-
-        self.vertices = Some
-        (vec![
-            vec![
-                vec![None; max_z as usize]; 
-                max_y as usize
-            ]; 
-            max_x as usize
-        ]);
-
-        for j in 0..MAP_HEIGHT/2
+        
+        for q_offset in -MAP_WIDTH .. MAP_WIDTH + 1  
         {
-            let offset_z : f32 = INITIAL_TRANSLATION.z + if j % 2 == 0 {J_OFFSET} else {0.0f32};
-            let offset_x : f32 = INITIAL_TRANSLATION.x + (HEX_RADIUS) * j as f32;
-    
-            for i in 0..MAP_WIDTH/2
+            let mut r_lower_bounds : i8 = -MAP_HEIGHT - q_offset;
+            let mut r_upper_bounds : i8 = MAP_HEIGHT - q_offset;
+
+            r_lower_bounds = i8::clamp(r_lower_bounds, -MAP_HEIGHT, MAP_HEIGHT);
+            r_upper_bounds = i8::clamp(r_upper_bounds, -MAP_HEIGHT, MAP_HEIGHT);
+
+            for r_offset in r_lower_bounds .. r_upper_bounds + 1
             {
+                let world_position : Vec3 = Self::hexAxialToWorld(q_offset, r_offset);
+
                 command_queue.spawn(SceneBundle{
                     scene : hexagon.clone(),
-                    transform : Transform::from_xyz(offset_x, INITIAL_TRANSLATION.y,  offset_z - i as f32 * J_SPACING),
+                    transform : Transform::from_translation(world_position).
+                        with_scale(vec3(HEX_RADIUS, HEX_RADIUS, HEX_RADIUS)),
                     ..default()
                 });
-                
-                let center : Vec3 = vec3(offset_x, INITIAL_TRANSLATION.y,  offset_z - i as f32 * J_SPACING);
-    
-                let bottom : Vec3 = center + vec3(HEX_RADIUS/1.9f32, 0.0f32, 0.0f32);
-                let top : Vec3 = center - vec3(HEX_RADIUS/1.9f32, 0.0f32, 0.0f32);
-                let top_right : Vec3 = center - vec3(-X_BASIS_VECTOR.x, 0.0f32, -X_BASIS_VECTOR.y);
-                let top_left : Vec3 = center - vec3(-X_BASIS_VECTOR.x, 0.0f32, X_BASIS_VECTOR.y);
-                let bottom_right : Vec3 = center + vec3(Z_BASIS_VECTOR.x, 0.0f32, -Z_BASIS_VECTOR.y);
-                let bottom_left : Vec3 = center + vec3(Z_BASIS_VECTOR.x, 0.0f32, Z_BASIS_VECTOR.y);
-    
-                let index_to_grid : Vec3 = Map::index_to_grid(i, j);
-                let x : usize = index_to_grid.x as usize;
-                let y : usize = index_to_grid.y as usize;
-                let z : usize = index_to_grid.z as usize;
-                
-                match self.vertices{
-                    Some(ref mut vec) => {
 
-                        vec[x][y][z] = Some(Vertex{has_settlement: false, world_coordinates: center, is_hex_center: true});
-                                
-                        match vec[x][y + 1][z] {
-                            Some(_) => (),
-                            None => {
-                                vec[x][y + 1][z] = Some(Vertex{has_settlement: false, world_coordinates: bottom, is_hex_center: false});
+                let x_index : usize = (q_offset + MAP_WIDTH) as usize;
+                let y_index : usize = (r_offset + MAP_HEIGHT) as usize;
+
+                println!("Coords of hex = x:{}, y:{}", q_offset, r_offset);
+                for i in 0..6 {
+                    let corner_vertex : Vec3 = Self::getCorners(world_position, i);
+                    let q_vertex_offset : i8 = q_offset + Self::vertexQOffsetFromI(i);
+                    let r_vertex_index : i8 = r_offset + Self::vertexROffsetFromI(i);
+                    let is_bottom : bool = i % 2 == 0;
+
+                    let x_vertex_index : usize = (q_vertex_offset + MAP_WIDTH + 1) as usize; 
+                    let y_vertex_index : usize = (r_vertex_index + MAP_HEIGHT + 1) as usize; 
+
+                    println!("X = {}, Y = {}, isBottom = {}", q_vertex_offset, r_vertex_index, is_bottom);
+
+                    match self.vertices {
+                        Some(ref mut vertices) => {
+                            if is_bottom {
+                                vertices[x_vertex_index][y_vertex_index].bottom = 
+                                    Some(Vertex{world_coordinates : corner_vertex});
                             }
-                        };
-                        match vec[x - 1][y][z - 1] {
-                            Some(_) => (),
-                            None => {
-                                vec[x - 1][y][z - 1] = Some(Vertex{has_settlement: false, world_coordinates: top, is_hex_center: false});
+                            else {
+                                vertices[x_vertex_index][y_vertex_index].top = 
+                                    Some(Vertex{world_coordinates : corner_vertex});
                             }
-                        };
-                        match vec[x][y][z - 1] {
-                            Some(_) => (),
-                            None => {
-                                vec[x][y][z - 1] = Some(Vertex{has_settlement: false, world_coordinates: top_right, is_hex_center: false});
-                            }
-                        };
-                        match vec[x - 1][y][z] {
-                            Some(_) => (),
-                            None => {
-                                println!("x = {}, x - 1 = {}", x, x-1);
-                                vec[x - 1][y][z] = Some(Vertex{has_settlement: false, world_coordinates: top_left, is_hex_center: false});
-                            }
-                        };
-                        match vec[x][y + 1][z - 1] {
-                            Some(_) => (),
-                            None => {
-                                vec[x][y + 1][z - 1] = Some(Vertex{has_settlement: false, world_coordinates: bottom_right, is_hex_center: false});
-                            }
-                        };
-                        match vec[x - 1][y + 1][z] {
-                            Some(_) => (),
-                            None => {
-                                vec[x - 1][y + 1][z] = Some(Vertex{has_settlement: false, world_coordinates: bottom_left, is_hex_center: false});
-                            }
-                        };
+                        }
+                        None => ()
+                    }
+                }
+
+                match self.hexes{
+                    Some(ref mut hexes) => {
+                        hexes[x_index][y_index] = 
+                            Some(Hex{
+                                    center_coordinates : world_position
+                                }
+                            );
                     },
-                    None => (),
+                    None => ()
                 }
             }
-        }
-    }
-
-    pub fn print_vertices(&self)
-    {
-        match self.vertices {
-            Some(ref vec) => {
-                for i in 0..vec.len() {
-                    for j in 0..vec[i].len()  {
-                        for k in 0..vec[i][j].len()  {
-                            match vec[i][j][k] {
-                                Some(value) => {
-                                    println!("grid coords = ({}, {}, {}), world coords = ({}, {}, {}), has settlement = ({}), is hex center = ({})",
-                                    i, j, k, 
-                                    value.world_coordinates.x, value.world_coordinates.y, value.world_coordinates.z, 
-                                    value.has_settlement, 
-                                    value.is_hex_center);
-                                },
-                                None => ()
-                            }
-                        }
-                    }
-                }
-            },
-            None => return
-        }
-    }
-
-    pub fn try_place_settlement(&mut self, vertex_index: Vec3) -> bool
-    {
-        let max_x : i8 = MAP_WIDTH/2 + f32::floor((MAP_HEIGHT as f32/2f32) / 2f32) as i8;
-        let max_z : i8 = max_x;
-        let max_y : i8 = MAP_HEIGHT/2;
-
-        match &mut self.vertices {
-            Some(vertices) => {
-                let top_neighbour: Vec3 = vertex_index + vec3(0f32, -1f32, 0f32);
-                let bottom_neighbour: Vec3 = vertex_index + vec3(0f32, 1f32, 0f32);
-
-                let z_left_neighbour: Vec3 = vertex_index + vec3(0f32, 0f32, -1f32);
-                let z_right_neighbour: Vec3 = vertex_index + vec3(0f32, 0f32, 1f32);
-
-                let x_left_neighbour: Vec3 = vertex_index + vec3(-1f32, 0f32, 0f32);
-                let x_right_neighbour: Vec3 = vertex_index + vec3(1f32, 0f32, 0f32);
-
-                let mut can_place: bool = true;
-                for i in 0..6 {
-                    let mut current_vertex_index : Vec3 = vertex_index;
-                    match i {
-                        0 => {current_vertex_index = top_neighbour},
-                        1 =>{current_vertex_index = bottom_neighbour},
-                        2 =>{current_vertex_index = z_left_neighbour},
-                        3 =>{current_vertex_index = z_right_neighbour},
-                        4 =>{current_vertex_index = x_left_neighbour},
-                        5 =>{current_vertex_index = x_right_neighbour},
-                        _=>()
-                    };
-
-                    if current_vertex_index.x < 0f32 || current_vertex_index.x > max_x as f32 || 
-                    current_vertex_index.y < 0f32 || current_vertex_index.y > max_y as f32 ||
-                    current_vertex_index.z < 0f32 || current_vertex_index.z > max_z as f32 
-                    {
-                        continue;
-                    }
-
-                    match vertices[current_vertex_index.x as usize][current_vertex_index.y as usize][current_vertex_index.z as usize] 
-                    {
-                        Some(neighbour_vertex) => {
-                            if neighbour_vertex.is_hex_center {continue;}
-                            println!("index: {} has settlement: {}", current_vertex_index, neighbour_vertex.has_settlement);
-                            if can_place {
-                                can_place = !neighbour_vertex.has_settlement;
-                            }
-                        },
-                        None => ()
-                    };
-                }
-
-                match &mut vertices[vertex_index.x as usize][vertex_index.y as usize][vertex_index.z as usize] {
-                    Some(vertex) => {
-                        if !can_place {return false;}
-
-                        vertex.has_settlement = true;
-                        return can_place;
-                    },
-                    None => ()
-                }
-            },
-            None => ()
-        }
-        return false;
-    }
-
-    pub fn get_vertex_at_position(&self, x : f32, z : f32, select_centers: bool) -> Option<Vec3>
-    {
-        let mut closest_vertex_index: Vec3 = Vec3::new(0f32, 0f32, 0f32);
-        let mut closest_vertex_distance: Option<f32> = None;
-
-        match &self.vertices {
-            Some(vertices) => {
-                for i in 0..vertices.len() 
-                {
-                    for j in 0..vertices[i].len()  
-                    {
-                        for k in 0..vertices[i][j].len() 
-                        {
-                            match vertices[i][j][k] {
-                                Some(vertex) => {
-                                    let vertex_distance: f32 = 
-                                    (vertex.world_coordinates - Vec3::new(x, vertex.world_coordinates.y, z)).length();
-
-                                    match closest_vertex_distance {
-                                        None => {
-                                            closest_vertex_distance = Some(vertex_distance);
-                                            closest_vertex_index = Vec3::new(i as f32, j as f32, k as f32);
-                                        },
-                                        Some(closest_distance) => {
-                                            if vertex_distance < closest_distance 
-                                            {
-                                                closest_vertex_distance = Some(vertex_distance);
-                                                closest_vertex_index = Vec3::new(i as f32, j as f32, k as f32);
-                                            }
-                                        }
-                                    }
-                                },
-                                None => ()
-                            }
-                        }
-                    }
-                }
-
-                match closest_vertex_distance {
-                    Some(closest_distance) => { if closest_distance > VERTEX_TOO_FAR_AWAY {return Option::None;}},
-                    None => ()
-                }
-
-                match vertices[closest_vertex_index.x as usize][closest_vertex_index.y as usize][closest_vertex_index.z as usize] {
-                    Some(vertex) => {if !select_centers && vertex.is_hex_center {return Option::None}},
-                    None => ()
-                }
-                return Option::Some(closest_vertex_index);
-            },
-            None => {return Option::None;}
         }
     }
 }

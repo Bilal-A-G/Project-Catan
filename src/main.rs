@@ -1,10 +1,8 @@
-use bevy::input::common_conditions::input_just_pressed;
 use bevy::prelude::*;
 use bevy::window::close_on_esc;
 use bevy::window::PresentMode;
 
 use level::create_level;
-use level::place_settlement;
 
 mod level;
 mod map;
@@ -31,6 +29,5 @@ fn main()
         .insert_resource(map)
         .add_systems(Update, close_on_esc)
         .add_systems(Startup, create_level) 
-        .add_systems(Update, place_settlement.run_if(input_just_pressed(MouseButton::Left)))
         .run(); 
 }
