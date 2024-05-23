@@ -60,6 +60,56 @@ impl Map
         }
     }
 
+    pub fn hexWorldToAxial(world : Vec3) -> Vec2
+    {
+        let y_axial : f32 = (world.x - INITIAL_TRANSLATION.x) / VERTICAL_DISTANCE;
+        let x_axial : f32 = (world.z - INITIAL_TRANSLATION.z - y_axial * (HORIZONTAL_DISTANCE / 2f32)) / HORIZONTAL_DISTANCE;
+        return vec2(x_axial, y_axial);
+    }
+
+    pub fn hexAxialRound(hex_frac_axial : Vec2) -> Vec2 
+    {
+        let rounded_q : f32 = f32::round(hex_frac_axial.x);
+        let rounded_r : f32 = f32::round(hex_frac_axial.y);
+
+        let remainder_q : f32 = hex_frac_axial.x - rounded_q;
+        let remainder_r : f32 = hex_frac_axial.y - rounded_r;
+
+        let mut rounded_axial : Vec2 = vec2(0f32, 0f32);
+
+        if f32::abs(remainder_q) > f32::abs(remainder_r)
+        {
+            rounded_axial.x = rounded_q + f32::round(remainder_q + 0.5f32 * remainder_r);
+            rounded_axial.y = rounded_r;
+        }
+        else {
+            rounded_axial.x = rounded_q;
+            rounded_axial.y = rounded_r + f32::round(remainder_r + 0.5f32 * remainder_q);
+        }
+
+        return rounded_axial;
+    }
+
+    pub fn vertexWorldToAxial(world : Vec3) -> Vec2
+    {
+        let hex_frac_axial : Vec2 = Self::hexWorldToAxial(world);
+        let rounded_hex_axial : Vec2 = Self::hexAxialRound(hex_frac_axial);
+
+        let center : Vec3 = Self::hexAxialToWorld(f32::floor(rounded_hex_axial.x) as i8, 
+            f32::floor(rounded_hex_axial.y) as i8);
+
+        let mut vertex_i : i8 = 0;
+        for i in 0i8..6i8 {
+            if Self::getCorners(center, i) == world {
+                vertex_i = i;
+                break;
+            }
+        }
+        let q_offset : i8 = Self::vertexQOffsetFromI(vertex_i);
+        let r_offset : i8 = Self::vertexROffsetFromI(vertex_i);
+        return vec2(q_offset as f32, r_offset as f32) + rounded_hex_axial;
+    }
+
     pub fn hexAxialToWorld(q_offset : i8, r_offset : i8) -> Vec3 
     {
         let x_position : f32 = INITIAL_TRANSLATION.x + r_offset as f32 * VERTICAL_DISTANCE;
@@ -69,11 +119,11 @@ impl Map
         return vec3(x_position, INITIAL_TRANSLATION.y, z_position);
     }
 
-    pub fn vertexAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, isbottom : bool, ) -> Vec3 
+    pub fn vertexAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, isbottom : bool ) -> Vec3 
     {
         let hex_axial : Vec2 = Self::hexWorldToAxial(center);
-        let vertex_q_offset : i8 = hex_axial.x as i8 - q_offset;
-        let vertex_r_offset : i8 = hex_axial.y as i8 - r_offset;
+        let vertex_q_offset : i8 = q_offset - hex_axial.x as i8;
+        let vertex_r_offset : i8 = r_offset - hex_axial.y as i8;
 
         let world_position : Vec3 = Self::getCorners(center, 
             Self::vertexIFromOffset(vertex_q_offset, vertex_r_offset, isbottom));
@@ -81,7 +131,7 @@ impl Map
         return world_position;
     }
 
-    pub fn vertexQOffsetFromI(i : i32) -> i8
+    pub fn vertexQOffsetFromI(i : i8) -> i8
     {
         if i == 0 || i == 3 || i == 2 || i == 5 {
             return 0;
@@ -95,7 +145,7 @@ impl Map
         }
     }
 
-    pub fn vertexIFromOffset(q_offset : i8, r_offset : i8, isbottom : bool) -> i32 
+    pub fn vertexIFromOffset(q_offset : i8, r_offset : i8, isbottom : bool) -> i8 
     {
         if q_offset == 0 && r_offset == 0 {
             if isbottom {return  0;}
@@ -117,7 +167,7 @@ impl Map
         }
     }
  
-    pub fn vertexROffsetFromI(i : i32) -> i8
+    pub fn vertexROffsetFromI(i : i8) -> i8
     {
         if i == 0 || i == 3 {
             return 0;
@@ -130,15 +180,8 @@ impl Map
             return 1;
         }
     }
- 
-    pub fn hexWorldToAxial(world : Vec3) -> Vec2
-    {
-        let y_axial : f32 = (world.x - INITIAL_TRANSLATION.x) / VERTICAL_DISTANCE;
-        let x_axial : f32 = (world.z - INITIAL_TRANSLATION.z - y_axial * (HORIZONTAL_DISTANCE / 2f32)) / HORIZONTAL_DISTANCE;
-        return vec2(x_axial, y_axial);
-    }
 
-    pub fn getCorners(center : Vec3, i : i32) -> Vec3
+    pub fn getCorners(center : Vec3, i : i8) -> Vec3
     {
         let degree_angle : f32 = 30f32 + (60f32 * i as f32 - 30f32);
         let rad_angle : f32 = 3.14f32 / 180f32 * degree_angle;
@@ -176,17 +219,24 @@ impl Map
                 let x_index : usize = (q_offset + MAP_WIDTH) as usize;
                 let y_index : usize = (r_offset + MAP_HEIGHT) as usize;
 
-                println!("Coords of hex = x:{}, y:{}", q_offset, r_offset);
-                for i in 0..6 {
+                println!("\n Coords of hex = x:{}, y:{}", q_offset, r_offset);
+
+                for i in 0i8..6i8 {
                     let corner_vertex : Vec3 = Self::getCorners(world_position, i);
                     let q_vertex_offset : i8 = q_offset + Self::vertexQOffsetFromI(i);
                     let r_vertex_index : i8 = r_offset + Self::vertexROffsetFromI(i);
                     let is_bottom : bool = i % 2 == 0;
 
                     let x_vertex_index : usize = (q_vertex_offset + MAP_WIDTH + 1) as usize; 
-                    let y_vertex_index : usize = (r_vertex_index + MAP_HEIGHT + 1) as usize; 
+                    let y_vertex_index : usize = (r_vertex_index + MAP_HEIGHT + 1) as usize;
 
-                    println!("X = {}, Y = {}, isBottom = {}", q_vertex_offset, r_vertex_index, is_bottom);
+                    let calculated_offset : Vec2 = Self::vertexWorldToAxial(corner_vertex);
+
+                    println!("X = {}, Y = {}, isBottom = {}, Calc X = {}, CalcY = {}", q_vertex_offset, r_vertex_index, 
+                        is_bottom, calculated_offset.x, calculated_offset.y);
+
+                    let calculated_world_pos : Vec3 = Self::vertexAxialToWorld(q_vertex_offset, r_vertex_index, world_position, is_bottom);
+                    println!("World X = {}, World Y = {}, Calc World X = {}, Calc World Y = {}", corner_vertex.x, corner_vertex.z, calculated_world_pos.x, calculated_world_pos.z);
 
                     match self.vertices {
                         Some(ref mut vertices) => {
