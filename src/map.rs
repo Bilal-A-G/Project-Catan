@@ -5,8 +5,8 @@ use bevy::scene::{Scene, SceneBundle};
 use bevy::asset::{self, AssetServer};
 use bevy::utils::default;
 
-const MAP_HEIGHT : i8 = 1; 
-const MAP_WIDTH : i8 = 1; 
+const MAP_HEIGHT : i8 = 2; 
+const MAP_WIDTH : i8 = 2; 
 
 const HEX_RADIUS : f32 = 1.0f32;
 const DEFAULT_HEX_SIZE : f32 = 0.2f32;
@@ -79,13 +79,6 @@ impl Map
         }
     }
 
-    pub fn hexWorldToAxial(world : Vec3) -> Vec2
-    {
-        let y_axial : f32 = (world.x - INITIAL_TRANSLATION.x) / VERTICAL_DISTANCE;
-        let x_axial : f32 = (world.z - INITIAL_TRANSLATION.z - y_axial * (HORIZONTAL_DISTANCE / 2f32)) / HORIZONTAL_DISTANCE;
-        return vec2(x_axial, y_axial);
-    }
-
     pub fn hexAxialRound(hex_frac_axial : Vec2) -> Vec2 
     {
         let rounded_q : f32 = f32::round(hex_frac_axial.x);
@@ -109,13 +102,18 @@ impl Map
         return rounded_axial;
     }
 
+    pub fn hexWorldToAxial(world : Vec3) -> Vec2
+    {
+        let y_axial : f32 = (world.x - INITIAL_TRANSLATION.x) / VERTICAL_DISTANCE;
+        let x_axial : f32 = (world.z - INITIAL_TRANSLATION.z - y_axial * (HORIZONTAL_DISTANCE / 2f32)) / HORIZONTAL_DISTANCE;
+        return vec2(x_axial, y_axial);
+    }
+
     pub fn vertexWorldToAxial(world : Vec3) -> (Vec2, bool)
     {
         let hex_frac_axial : Vec2 = Self::hexWorldToAxial(world);
         let rounded_hex_axial : Vec2 = Self::hexAxialRound(hex_frac_axial);
-
-        let center : Vec3 = Self::hexAxialToWorld(f32::floor(rounded_hex_axial.x) as i8, 
-            f32::floor(rounded_hex_axial.y) as i8);
+        let center : Vec3 = Self::hexAxialToWorld(rounded_hex_axial.x as i8, rounded_hex_axial.y as i8);
 
         let mut vertex_i : i8 = 0;
         for i in 0i8..6i8 {
@@ -129,6 +127,29 @@ impl Map
         return (vec2(q_offset as f32, r_offset as f32) + rounded_hex_axial, vertex_i % 2 == 0);
     }
 
+    pub fn edgeWorldToAxial(world : Vec3) -> (Vec2, bool, bool, bool)
+    {
+        let hex_frac_axial : Vec2 = Self::hexWorldToAxial(world);
+        let rounded_hex_axial : Vec2 = Self::hexAxialRound(hex_frac_axial);
+        let center : Vec3 = Self::hexAxialToWorld(rounded_hex_axial.x as i8, rounded_hex_axial.y as i8);
+
+        let mut edge_i : i8 = 0;
+        for i in 0i8..6i8 {
+            if Self::getEdges(center, i) == world {
+                edge_i = i;
+                break;
+            }
+        }
+        let q_offset : i8 = Self::edgeQOffsetFromI(edge_i);
+        let r_offset : i8 = Self::edgeROffsetFromI(edge_i);
+
+        //is north, is west and is east booleans in tuple
+        return (vec2(q_offset as f32, r_offset as f32) + rounded_hex_axial, 
+            edge_i == 0 || edge_i == 3, 
+            edge_i == 2 || edge_i == 5, 
+            edge_i == 1 || edge_i == 4);
+    }
+
     pub fn hexAxialToWorld(q_offset : i8, r_offset : i8) -> Vec3 
     {
         let x_position : f32 = INITIAL_TRANSLATION.x + r_offset as f32 * VERTICAL_DISTANCE;
@@ -138,15 +159,27 @@ impl Map
         return vec3(x_position, INITIAL_TRANSLATION.y, z_position);
     }
 
-    pub fn vertexAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, isbottom : bool ) -> Vec3 
+    pub fn vertexAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, is_bottom : bool ) -> Vec3 
     {
         let hex_axial : Vec2 = Self::hexWorldToAxial(center);
         let vertex_q_offset : i8 = q_offset - hex_axial.x as i8;
         let vertex_r_offset : i8 = r_offset - hex_axial.y as i8;
 
         let world_position : Vec3 = Self::getCorners(center, 
-            Self::vertexIFromOffset(vertex_q_offset, vertex_r_offset, isbottom));
+            Self::vertexIFromOffset(vertex_q_offset, vertex_r_offset, is_bottom));
         
+        return world_position;
+    }
+
+    pub fn edgeAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, is_north : bool, is_west : bool, is_east : bool) -> Vec3
+    {
+        let hex_axial : Vec2 = Self::hexWorldToAxial(center);
+        let edge_q_offset : i8 = q_offset - hex_axial.x as i8;
+        let edge_r_offset : i8 = r_offset - hex_axial.y as i8;
+
+        let world_position : Vec3 = Self::getEdges(center, 
+            Self::edgeIFromOffset(edge_q_offset, edge_r_offset, is_north, is_west, is_east));
+
         return world_position;
     }
 
@@ -219,6 +252,35 @@ impl Map
         }
         else{
             print!("Vertex i value cannot be found!");
+            return -1;
+        }
+    }
+
+    pub fn edgeIFromOffset(q_offset : i8, r_offset : i8, is_north : bool, is_west : bool, is_east : bool) -> i8
+    {
+        if q_offset == 0 && r_offset == 0 {
+            if is_west {
+                return 2;
+            }
+            else if is_north {
+                return 3;
+            }
+            else if is_east {
+                return  4;
+            }
+        }
+
+        if q_offset == 0 && r_offset == -1 {
+            return 0;
+        }
+        else if q_offset == -1 && r_offset == 0 {
+            return 1;
+        }
+        else if q_offset == 1 && r_offset == -1 {
+            return 5;
+        }
+        else {
+            print!("Edge i value cannot be found!");
             return -1;
         }
     }
@@ -318,8 +380,15 @@ impl Map
                     let x_edge_index : usize = (q_edge_offset + MAP_WIDTH + 1) as usize; 
                     let y_edge_index : usize = (r_edge_offset + MAP_HEIGHT + 1) as usize;
 
-                    println!("Edge Q = {}, Edge R = {}, IsNorth = {}, IsWest = {}, IsEast = {}", 
-                        q_edge_offset, r_edge_offset, is_north, is_west, is_east);
+                    //println!("Edge Q = {}, Edge R = {}, IsNorth = {}, IsWest = {}, IsEast = {}", 
+                        //q_edge_offset, r_edge_offset, is_north, is_west, is_east);
+
+                    let calculated_offset : Vec2 = Self::edgeWorldToAxial(border_edge).0;
+                    println!("X = {}, Y = {}, Calc X = {}, CalcY = {}", q_edge_offset, r_edge_offset, 
+                        calculated_offset.x, calculated_offset.y);
+
+                    let calculated_world_pos : Vec3 = Self::edgeAxialToWorld(q_edge_offset, r_edge_offset, world_position, is_north, is_west, is_east);
+                    println!("World X = {}, World Y = {}, Calc World X = {}, Calc World Y = {}", border_edge.x, border_edge.z, calculated_world_pos.x, calculated_world_pos.z);
 
                     match self.edges {
                         Some(ref mut edges) => {
