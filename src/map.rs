@@ -5,8 +5,8 @@ use bevy::scene::{Scene, SceneBundle};
 use bevy::asset::{self, AssetServer};
 use bevy::utils::default;
 
-const MAP_HEIGHT : i8 = 1; 
-const MAP_WIDTH : i8 = 1; 
+const MAP_HEIGHT : i8 = 2; 
+const MAP_WIDTH : i8 = 2; 
 
 const HEX_RADIUS : f32 = 1.0f32;
 const DEFAULT_HEX_SIZE : f32 = 0.2f32;
@@ -90,7 +90,7 @@ impl Map
         return rounded_axial;
     }
 
-    pub fn vertexWorldToAxial(world : Vec3) -> Vec2
+    pub fn vertexWorldToAxial(world : Vec3) -> (Vec2, bool)
     {
         let hex_frac_axial : Vec2 = Self::hexWorldToAxial(world);
         let rounded_hex_axial : Vec2 = Self::hexAxialRound(hex_frac_axial);
@@ -107,7 +107,7 @@ impl Map
         }
         let q_offset : i8 = Self::vertexQOffsetFromI(vertex_i);
         let r_offset : i8 = Self::vertexROffsetFromI(vertex_i);
-        return vec2(q_offset as f32, r_offset as f32) + rounded_hex_axial;
+        return (vec2(q_offset as f32, r_offset as f32) + rounded_hex_axial, vertex_i % 2 == 0);
     }
 
     pub fn hexAxialToWorld(q_offset : i8, r_offset : i8) -> Vec3 
@@ -230,8 +230,7 @@ impl Map
                     let x_vertex_index : usize = (q_vertex_offset + MAP_WIDTH + 1) as usize; 
                     let y_vertex_index : usize = (r_vertex_index + MAP_HEIGHT + 1) as usize;
 
-                    let calculated_offset : Vec2 = Self::vertexWorldToAxial(corner_vertex);
-
+                    let calculated_offset : Vec2 = Self::vertexWorldToAxial(corner_vertex).0;
                     println!("X = {}, Y = {}, isBottom = {}, Calc X = {}, CalcY = {}", q_vertex_offset, r_vertex_index, 
                         is_bottom, calculated_offset.x, calculated_offset.y);
 
