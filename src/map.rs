@@ -5,8 +5,8 @@ use bevy::scene::{Scene, SceneBundle};
 use bevy::asset::{self, AssetServer};
 use bevy::utils::default;
 
-const MAP_HEIGHT : i8 = 2; 
-const MAP_WIDTH : i8 = 2; 
+const MAP_HEIGHT : i8 = 1; 
+const MAP_WIDTH : i8 = 1; 
 
 const HEX_RADIUS : f32 = 1.0f32;
 const DEFAULT_HEX_SIZE : f32 = 0.2f32;
@@ -24,10 +24,24 @@ pub struct Vertex
 }
 
 #[derive(Copy, Clone)]
+pub struct Edge 
+{
+    world_coordinates : Vec3
+}
+
+#[derive(Copy, Clone)]
 pub struct HexVertex 
 {
     top : Option<Vertex>,
     bottom : Option<Vertex>
+}
+
+#[derive(Copy, Clone)]
+pub struct HexEdge
+{
+    north : Option<Edge>,
+    west : Option<Edge>,
+    east : Option<Edge>
 }
 
 #[derive(Copy, Clone)]
@@ -40,7 +54,8 @@ pub struct Hex
 pub struct Map
 {
     hexes : Option<Vec<Vec<Option<Hex>>>>,
-    vertices : Option<Vec<Vec<HexVertex>>>
+    vertices : Option<Vec<Vec<HexVertex>>>,
+    edges : Option<Vec<Vec<HexEdge>>>
 }
 
 impl Map 
@@ -56,6 +71,10 @@ impl Map
             vertices: Some(vec![
                 vec![HexVertex{top : None, bottom : None}; ((MAP_WIDTH * 2 + 1) + 2) as usize];
                 ((MAP_HEIGHT * 2 + 1) + 2) as usize               
+            ]),
+            edges: Some(vec![
+                vec![HexEdge{north : None, west : None, east : None}; ((MAP_WIDTH * 2 + 1) + 2) as usize];
+                ((MAP_HEIGHT * 2 + 1) + 2) as usize
             ])
         }
     }
@@ -145,6 +164,43 @@ impl Map
         }
     }
 
+    pub fn vertexROffsetFromI(i : i8) -> i8
+    {
+        if i == 0 || i == 3 {
+            return 0;
+        }
+
+        if i % 2 == 0{
+            return -1;
+        }
+        else {
+            return 1;
+        }
+    }
+
+    pub fn edgeQOffsetFromI(i : i8) -> i8 
+    {
+        if i == 0 || i == 2 || i == 3 || i == 4{
+            return 0;
+        }
+        else if i == 1{
+            return -1;
+        }
+        else {
+            return 1;
+        }
+    }
+
+    pub fn edgeROffsetFromI(i : i8) -> i8 
+    {
+        if i == 1 || i == 2 || i == 3 || i == 4{
+            return 0;
+        }
+        else {
+            return -1;
+        }
+    }
+
     pub fn vertexIFromOffset(q_offset : i8, r_offset : i8, isbottom : bool) -> i8 
     {
         if q_offset == 0 && r_offset == 0 {
@@ -166,20 +222,6 @@ impl Map
             return -1;
         }
     }
- 
-    pub fn vertexROffsetFromI(i : i8) -> i8
-    {
-        if i == 0 || i == 3 {
-            return 0;
-        }
-
-        if i % 2 == 0{
-            return -1;
-        }
-        else {
-            return 1;
-        }
-    }
 
     pub fn getCorners(center : Vec3, i : i8) -> Vec3
     {
@@ -191,6 +233,18 @@ impl Map
             center.z + (HEX_RADIUS) * f32::sin(rad_angle));
         
         return vertex_coord;
+    }
+
+    pub fn getEdges(center : Vec3, i : i8) -> Vec3
+    {
+        let degree_angle : f32 = 60f32 * i as f32 - 30f32;
+        let rad_angle : f32 = 3.14f32 / 180f32 * degree_angle;
+        let edge_coord : Vec3 = vec3(
+            center.x + (HEX_RADIUS) * f32::cos(rad_angle), 
+            center.y,
+            center.z + (HEX_RADIUS) * f32::sin(rad_angle));
+        
+        return edge_coord;
     }
 
     pub fn spawn(&mut self, command_queue : &mut Commands, asset_server : Res<AssetServer>) 
@@ -230,12 +284,12 @@ impl Map
                     let x_vertex_index : usize = (q_vertex_offset + MAP_WIDTH + 1) as usize; 
                     let y_vertex_index : usize = (r_vertex_index + MAP_HEIGHT + 1) as usize;
 
-                    let calculated_offset : Vec2 = Self::vertexWorldToAxial(corner_vertex).0;
-                    println!("X = {}, Y = {}, isBottom = {}, Calc X = {}, CalcY = {}", q_vertex_offset, r_vertex_index, 
-                        is_bottom, calculated_offset.x, calculated_offset.y);
+                    //let calculated_offset : Vec2 = Self::vertexWorldToAxial(corner_vertex).0;
+                    //println!("X = {}, Y = {}, isBottom = {}, Calc X = {}, CalcY = {}", q_vertex_offset, r_vertex_index, 
+                        //is_bottom, calculated_offset.x, calculated_offset.y);
 
-                    let calculated_world_pos : Vec3 = Self::vertexAxialToWorld(q_vertex_offset, r_vertex_index, world_position, is_bottom);
-                    println!("World X = {}, World Y = {}, Calc World X = {}, Calc World Y = {}", corner_vertex.x, corner_vertex.z, calculated_world_pos.x, calculated_world_pos.z);
+                    //let calculated_world_pos : Vec3 = Self::vertexAxialToWorld(q_vertex_offset, r_vertex_index, world_position, is_bottom);
+                    //println!("World X = {}, World Y = {}, Calc World X = {}, Calc World Y = {}", corner_vertex.x, corner_vertex.z, calculated_world_pos.x, calculated_world_pos.z);
 
                     match self.vertices {
                         Some(ref mut vertices) => {
@@ -248,6 +302,37 @@ impl Map
                                     Some(Vertex{world_coordinates : corner_vertex});
                             }
                         }
+                        None => ()
+                    }
+                }
+
+                for i in 0i8 .. 6i8  {
+                    let border_edge : Vec3 = Self::getEdges(world_position, i);
+                    let q_edge_offset :  i8 = q_offset + Self::edgeQOffsetFromI(i);
+                    let r_edge_offset : i8 = r_offset + Self::edgeROffsetFromI(i);
+
+                    let is_north : bool = i == 0 || i == 3;
+                    let is_west : bool = i == 2 || i == 5;
+                    let is_east : bool = i == 1 || i == 4;
+
+                    let x_edge_index : usize = (q_edge_offset + MAP_WIDTH + 1) as usize; 
+                    let y_edge_index : usize = (r_edge_offset + MAP_HEIGHT + 1) as usize;
+
+                    println!("Edge Q = {}, Edge R = {}, IsNorth = {}, IsWest = {}, IsEast = {}", 
+                        q_edge_offset, r_edge_offset, is_north, is_west, is_east);
+
+                    match self.edges {
+                        Some(ref mut edges) => {
+                            if is_north {
+                                edges[x_edge_index][y_edge_index].north = Some(Edge { world_coordinates: border_edge })
+                            }
+                            else if is_east {
+                                edges[x_edge_index][y_edge_index].east = Some(Edge { world_coordinates: border_edge })
+                            }
+                            else if is_west {
+                                edges[x_edge_index][y_edge_index].west = Some(Edge {world_coordinates : border_edge })
+                            }
+                        },
                         None => ()
                     }
                 }
