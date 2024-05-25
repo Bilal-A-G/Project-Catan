@@ -5,8 +5,8 @@ use bevy::scene::{Scene, SceneBundle};
 use bevy::asset::{self, AssetServer};
 use bevy::utils::default;
 
-const MAP_HEIGHT : i8 = 2; 
-const MAP_WIDTH : i8 = 2; 
+const MAP_HEIGHT : i8 = 1; 
+const MAP_WIDTH : i8 = 1; 
 
 const HEX_RADIUS : f32 = 1.0f32;
 const DEFAULT_HEX_SIZE : f32 = 0.2f32;
@@ -309,6 +309,44 @@ impl Map
         return edge_coord;
     }
 
+    //For manhattan distance, use as is
+    pub fn vertexToCube(i : i8, hex_q : i8, hex_r : i8) -> Vec3 
+    {   
+        let hex_cube : Vec3 = vec3((hex_r + hex_q) as f32, -hex_r as f32, hex_q as f32);
+        let mut vertex_cube_offset : Vec3 = vec3(0f32, 0f32, 0f32);
+
+        match i {
+            0 => {vertex_cube_offset.y -= 1f32}
+            1 => {vertex_cube_offset.x -= 1f32; vertex_cube_offset.y -= 1f32}
+            2 => {vertex_cube_offset.x -= 1f32}
+            3 => {vertex_cube_offset.x -= 1f32; vertex_cube_offset.z += 1f32}
+            4 => {vertex_cube_offset.z += 1f32}
+            5 => {vertex_cube_offset.z += 1f32; vertex_cube_offset.y -= 1f32}
+            _ => ()
+        }
+
+        return hex_cube + vertex_cube_offset;
+    }
+
+    //For manhattan distance, add 1
+    pub fn edgeToCube(i : i8, hex_q : i8, hex_r : i8) -> Vec3 
+    {
+        let hex_cube : Vec3 = vec3((hex_r + hex_q) as f32, -hex_r as f32, hex_q as f32);
+        let mut edge_cube_offset : Vec3 = vec3(0f32, 0f32, 0f32);
+
+        match i {
+            0 => {edge_cube_offset.y -= 1f32; edge_cube_offset.x -= 0.5f32}
+            1 => {edge_cube_offset.x -= 1f32; edge_cube_offset.y -= 0.5f32}
+            2 => {edge_cube_offset.x -= 1f32; edge_cube_offset.z += 0.5f32}
+            3 => {edge_cube_offset.z += 1f32; edge_cube_offset.x -= 0.5f32}
+            4 => {edge_cube_offset.z += 1f32; edge_cube_offset.y -= 0.5f32}
+            5 => {edge_cube_offset.y -= 1f32; edge_cube_offset.z += 0.5f32}
+            _ => ()
+        }
+
+        return hex_cube + edge_cube_offset;
+    }
+
     pub fn spawn(&mut self, command_queue : &mut Commands, asset_server : Res<AssetServer>) 
     {
         let hexagon : bevy::prelude::Handle<Scene> = asset_server.load("Hex.glb#Scene0");
@@ -346,10 +384,6 @@ impl Map
                     let x_vertex_index : usize = (q_vertex_offset + MAP_WIDTH + 1) as usize; 
                     let y_vertex_index : usize = (r_vertex_index + MAP_HEIGHT + 1) as usize;
 
-                    //let calculated_offset : Vec2 = Self::vertexWorldToAxial(corner_vertex).0;
-                    //println!("X = {}, Y = {}, isBottom = {}, Calc X = {}, CalcY = {}", q_vertex_offset, r_vertex_index, 
-                        //is_bottom, calculated_offset.x, calculated_offset.y);
-
                     //let calculated_world_pos : Vec3 = Self::vertexAxialToWorld(q_vertex_offset, r_vertex_index, world_position, is_bottom);
                     //println!("World X = {}, World Y = {}, Calc World X = {}, Calc World Y = {}", corner_vertex.x, corner_vertex.z, calculated_world_pos.x, calculated_world_pos.z);
 
@@ -380,15 +414,18 @@ impl Map
                     let x_edge_index : usize = (q_edge_offset + MAP_WIDTH + 1) as usize; 
                     let y_edge_index : usize = (r_edge_offset + MAP_HEIGHT + 1) as usize;
 
+                    let cube_coords : Vec3 = Self::edgeToCube(i, q_offset, r_offset);
+                    println!("X = {}, Y = {}, Z = {}", cube_coords.x, cube_coords.y, cube_coords.z);
+
                     //println!("Edge Q = {}, Edge R = {}, IsNorth = {}, IsWest = {}, IsEast = {}", 
                         //q_edge_offset, r_edge_offset, is_north, is_west, is_east);
 
-                    let calculated_offset : Vec2 = Self::edgeWorldToAxial(border_edge).0;
-                    println!("X = {}, Y = {}, Calc X = {}, CalcY = {}", q_edge_offset, r_edge_offset, 
-                        calculated_offset.x, calculated_offset.y);
+                    //let calculated_offset : Vec2 = Self::edgeWorldToAxial(border_edge).0;
+                    //println!("X = {}, Y = {}, Calc X = {}, CalcY = {}", q_edge_offset, r_edge_offset, 
+                        //calculated_offset.x, calculated_offset.y);
 
-                    let calculated_world_pos : Vec3 = Self::edgeAxialToWorld(q_edge_offset, r_edge_offset, world_position, is_north, is_west, is_east);
-                    println!("World X = {}, World Y = {}, Calc World X = {}, Calc World Y = {}", border_edge.x, border_edge.z, calculated_world_pos.x, calculated_world_pos.z);
+                    //let calculated_world_pos : Vec3 = Self::edgeAxialToWorld(q_edge_offset, r_edge_offset, world_position, is_north, is_west, is_east);
+                    //println!("World X = {}, World Y = {}, Calc World X = {}, Calc World Y = {}", border_edge.x, border_edge.z, calculated_world_pos.x, calculated_world_pos.z);
 
                     match self.edges {
                         Some(ref mut edges) => {
