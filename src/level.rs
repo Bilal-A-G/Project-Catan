@@ -10,13 +10,14 @@ use bevy::transform::components::GlobalTransform;
 use bevy::ecs::system::Res;
 use bevy::window::Window;
 use bevy::render::camera::Camera;
+use bevy::ecs::event::EventReader;
+use bevy::window::CursorMoved;
 
 use super::map;
 
 pub fn create_level(mut command_queue : Commands, asset_server : Res<AssetServer>, mut map : ResMut<map::Map>)
 {
     map.spawn(&mut command_queue, asset_server);
-    //map.print_vertices();
 
     command_queue.spawn(Camera3dBundle{
         transform : Transform::from_xyz(0.0, 20.0, 0.0)
@@ -36,4 +37,25 @@ pub fn create_level(mut command_queue : Commands, asset_server : Res<AssetServer
         transform : Transform::from_xyz(0f32, 10f32, 0f32).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
+}
+
+pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Query<&mut Window>, mut map : ResMut<map::Map>, 
+    camera: Query<(&Camera, &GlobalTransform)>)
+{
+    for event in cursor_event.read()  
+    {
+        match camera.single().0.viewport_to_world(camera.single().1, event.position) {
+            Some(value) => {
+                let vertex_axial : Option<(Vec2, bool)> =
+                     map::Map::vertexWorldToAxial(vec3(value.origin.x, 0f32, value.origin.z));
+                match vertex_axial {
+                    Some(value) =>{
+                        println!("Cursor moved to vertex! q: {} r: {} isBottom: {}", value.0.x, value.0.y, value.1);
+                    }
+                    None => ()
+                }
+            }
+            None => ()
+        }
+    }
 }

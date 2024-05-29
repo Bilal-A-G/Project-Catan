@@ -6,6 +6,7 @@ use level::create_level;
 
 mod level;
 mod map;
+mod common;
 
 pub const WIDTH : f32 = 600f32;
 pub const HEIGHT : f32 = 400f32;
@@ -29,5 +30,6 @@ fn main()
         .insert_resource(map)
         .add_systems(Update, close_on_esc)
         .add_systems(Startup, create_level) 
+        .add_systems(Update, level::mouse_moved)
         .run(); 
 }

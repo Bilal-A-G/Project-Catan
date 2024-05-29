@@ -1,19 +1,23 @@
 use bevy::math::Vec3;
 
-#[repr(u8)]
-enum Resources
+pub mod common 
 {
-    Wood,
-    Stone,
-    Brick,
-    Sheep,
-    Wheat
-}
-
-#[repr(u8)]
-enum Tiles
-{
-    Resource,
-    Desert,
-    Water   
+    #[repr(u8)]
+    #[derive(Clone)]
+    pub enum ResourceType{
+        Nothing,
+        Wood,
+        Stone,
+        Brick,
+        Sheep,
+        Wheat,
+        Anything,
+        Water
+    }
+    
+    #[derive(Clone)]
+    pub struct PortData {
+        pub input : ResourceType,
+        pub num_inputs : i8
+    }
 }
