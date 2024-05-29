@@ -50,7 +50,9 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
             Some(value) => {
                 let vertex_axial : Option<(Vec2, bool)> =
                      map::Map::vertexWorldToAxial(vec3(value.origin.x, 0f32, value.origin.z));
-                match vertex_axial {
+                let hex_axial : Option<Vec2> = map::Map::hexWorldToAxial(vec3(value.origin.x, 0f32, value.origin.z));
+                
+                 match vertex_axial {
                     Some(value) =>{
                         match &map.vertices {
                             Some(vertices) => {

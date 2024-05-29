@@ -6,9 +6,10 @@ use bevy::scene::{Scene, SceneBundle};
 use bevy::asset::{self, AssetServer};
 use bevy::utils::default;
 
-use crate::common::common::PortData;
+use crate::common;
+use crate::common::common::{HexData, PortData, RoadData, SettlementData};
 use crate::common::common::ResourceType;
-
+use rand::Rng;
 const MAP_SIZE : i8 = 2; 
 
 const HEX_RADIUS : f32 = 1.0f32;
@@ -26,7 +27,8 @@ const CLOSENESS_THRESHOLD : f32 = 0.3f32;
 pub struct Vertex 
 {
     pub world_coordinates : Vec3,
-    pub port_data : Option<PortData>
+    pub port_data : Option<PortData>,
+    pub settlement_data : Option<SettlementData>
 }
 
 pub struct PortPosition
@@ -38,7 +40,8 @@ pub struct PortPosition
 #[derive(Copy, Clone)]
 pub struct Edge 
 {
-    world_coordinates : Vec3
+    world_coordinates : Vec3,
+    road_data : Option<RoadData>
 }
 
 #[derive(Clone)]
@@ -59,7 +62,8 @@ pub struct HexEdge
 #[derive(Copy, Clone)]
 pub struct Hex
 {
-    center_coordinates : Vec3
+    center_coordinates : Vec3,
+    hex_data : HexData
 }
 
 #[derive(Resource)]
@@ -156,11 +160,14 @@ impl Map
         return rounded_axial;
     }
 
-    pub fn hexWorldToAxial(world : Vec3) -> Vec2
+    pub fn hexWorldToAxial(world : Vec3) -> Option<Vec2>
     {
         let y_axial : f32 = (world.x - INITIAL_TRANSLATION.x) / VERTICAL_DISTANCE;
         let x_axial : f32 = (world.z - INITIAL_TRANSLATION.z - y_axial * (HORIZONTAL_DISTANCE / 2f32)) / HORIZONTAL_DISTANCE;
-        return vec2(x_axial, y_axial);
+        if Self::cubeToDist(Self::hexToCube(x_axial as i8, y_axial as i8)) > MAP_SIZE as f32 {
+            return None;
+        }
+        return Some(vec2(x_axial, y_axial));
     }
 
     pub fn cubeToDist(cube : Vec3) -> f32
@@ -170,29 +177,34 @@ impl Map
 
     pub fn vertexWorldToAxial(world : Vec3) -> Option<(Vec2, bool)>
     {
-        let hex_frac_axial : Vec2 = Self::hexWorldToAxial(world);
-        let rounded_hex_axial : Vec2 = Self::hexAxialRound(hex_frac_axial);
-        let hex_cube_coords : Vec3 = Self::hexToCube(rounded_hex_axial.x as i8, rounded_hex_axial.y as i8);
-        let distance_from_center : f32 = Self::cubeToDist(hex_cube_coords);
-
-        if distance_from_center > MAP_SIZE as f32 {
-            return None;
+        let hex_frac_axial : Option<Vec2> = Self::hexWorldToAxial(world);
+        match hex_frac_axial {
+            Some(axial) => {
+                let rounded_hex_axial : Vec2 = Self::hexAxialRound(axial);
+                let hex_cube_coords : Vec3 = Self::hexToCube(rounded_hex_axial.x as i8, rounded_hex_axial.y as i8);
+                let distance_from_center : f32 = Self::cubeToDist(hex_cube_coords);
+        
+                if distance_from_center > MAP_SIZE as f32 {
+                    return None;
+                }
+        
+                let center : Vec3 = Self::hexAxialToWorld(rounded_hex_axial.x as i8, rounded_hex_axial.y as i8);
+                let mut vertex_i : i8 = -1;
+                for i in 0i8..6i8 {
+                    if (Self::getCorners(center, i) - world).length() <= CLOSENESS_THRESHOLD {
+                        vertex_i = i;
+                        break;
+                    }
+                }
+                if vertex_i == -1 {
+                    return None;
+                } 
+                let q_offset : i8 = Self::vertexQOffsetFromI(vertex_i);
+                let r_offset : i8 = Self::vertexROffsetFromI(vertex_i);
+                return Some((vec2(q_offset as f32, r_offset as f32) + rounded_hex_axial, vertex_i % 2 == 0));
+            },
+            None => {return None;}
         }
-
-        let center : Vec3 = Self::hexAxialToWorld(rounded_hex_axial.x as i8, rounded_hex_axial.y as i8);
-        let mut vertex_i : i8 = -1;
-        for i in 0i8..6i8 {
-            if (Self::getCorners(center, i) - world).length() <= CLOSENESS_THRESHOLD {
-                vertex_i = i;
-                break;
-            }
-        }
-        if vertex_i == -1 {
-            return None;
-        } 
-        let q_offset : i8 = Self::vertexQOffsetFromI(vertex_i);
-        let r_offset : i8 = Self::vertexROffsetFromI(vertex_i);
-        return Some((vec2(q_offset as f32, r_offset as f32) + rounded_hex_axial, vertex_i % 2 == 0));
     }
 
     pub fn hexToCube(q : i8, r : i8) -> Vec3
@@ -202,30 +214,39 @@ impl Map
 
     pub fn edgeWorldToAxial(world : Vec3) -> Option<(Vec2, bool, bool, bool)>
     {
-        let mut hex_frac_axial : Vec2 = Self::hexWorldToAxial(world);
-        hex_frac_axial = vec2(f32::clamp(hex_frac_axial.x, -MAP_SIZE as f32, MAP_SIZE as f32), 
-            f32::clamp(hex_frac_axial.y, -MAP_SIZE as f32, MAP_SIZE as f32));
-        let rounded_hex_axial : Vec2 = Self::hexAxialRound(hex_frac_axial);
-        let center : Vec3 = Self::hexAxialToWorld(rounded_hex_axial.x as i8, rounded_hex_axial.y as i8);
-
-        let mut edge_i : i8 = -1;
-        for i in 0i8..6i8 {
-            if (Self::getEdges(center, i) - world).length() <= CLOSENESS_THRESHOLD {
-                edge_i = i;
-                break;
-            }
+        let mut hex_frac_axial : Option<Vec2> = Self::hexWorldToAxial(world);
+        match hex_frac_axial {
+            Some(axial) => {
+                let rounded_hex_axial : Vec2 = Self::hexAxialRound(axial);
+                let hex_cube_coords : Vec3 = Self::hexToCube(rounded_hex_axial.x as i8, rounded_hex_axial.y as i8);
+                let distance_from_center : f32 = Self::cubeToDist(hex_cube_coords);
+        
+                if distance_from_center > MAP_SIZE as f32 {
+                    return None;
+                }
+                let center : Vec3 = Self::hexAxialToWorld(rounded_hex_axial.x as i8, rounded_hex_axial.y as i8);
+        
+                let mut edge_i : i8 = -1;
+                for i in 0i8..6i8 {
+                    if (Self::getEdges(center, i) - world).length() <= CLOSENESS_THRESHOLD {
+                        edge_i = i;
+                        break;
+                    }
+                }
+                if edge_i == -1 {
+                    return None;
+                }
+                let q_offset : i8 = Self::edgeQOffsetFromI(edge_i);
+                let r_offset : i8 = Self::edgeROffsetFromI(edge_i);
+        
+                //is north, is west and is east booleans in tuple
+                return Some((vec2(q_offset as f32, r_offset as f32) + rounded_hex_axial, 
+                    edge_i == 0 || edge_i == 3, 
+                    edge_i == 2 || edge_i == 5, 
+                    edge_i == 1 || edge_i == 4));
+            },
+            None => {return None;}
         }
-        if edge_i == -1 {
-            return None;
-        }
-        let q_offset : i8 = Self::edgeQOffsetFromI(edge_i);
-        let r_offset : i8 = Self::edgeROffsetFromI(edge_i);
-
-        //is north, is west and is east booleans in tuple
-        return Some((vec2(q_offset as f32, r_offset as f32) + rounded_hex_axial, 
-            edge_i == 0 || edge_i == 3, 
-            edge_i == 2 || edge_i == 5, 
-            edge_i == 1 || edge_i == 4));
     }
 
     pub fn hexAxialToWorld(q_offset : i8, r_offset : i8) -> Vec3 
@@ -237,28 +258,38 @@ impl Map
         return vec3(x_position, INITIAL_TRANSLATION.y, z_position);
     }
 
-    pub fn vertexAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, is_bottom : bool ) -> Vec3 
+    pub fn vertexAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, is_bottom : bool ) -> Option<Vec3> 
     {
-        let hex_axial : Vec2 = Self::hexWorldToAxial(center);
-        let vertex_q_offset : i8 = q_offset - hex_axial.x as i8;
-        let vertex_r_offset : i8 = r_offset - hex_axial.y as i8;
-
-        let world_position : Vec3 = Self::getCorners(center, 
-            Self::vertexIFromOffset(vertex_q_offset, vertex_r_offset, is_bottom));
+        let hex_axial : Option<Vec2> = Self::hexWorldToAxial(center);
+        match hex_axial {
+            Some(axial) => {
+                let vertex_q_offset : i8 = q_offset - axial.x as i8;
+                let vertex_r_offset : i8 = r_offset - axial.y as i8;
         
-        return world_position;
+                let world_position : Vec3 = Self::getCorners(center, 
+                    Self::vertexIFromOffset(vertex_q_offset, vertex_r_offset, is_bottom));
+                
+                return Some(world_position);
+            },
+            None => {return None}
+        }
     }
 
-    pub fn edgeAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, is_north : bool, is_west : bool, is_east : bool) -> Vec3
+    pub fn edgeAxialToWorld(q_offset : i8, r_offset : i8, center : Vec3, is_north : bool, is_west : bool, is_east : bool) -> Option<Vec3>
     {
-        let hex_axial : Vec2 = Self::hexWorldToAxial(center);
-        let edge_q_offset : i8 = q_offset - hex_axial.x as i8;
-        let edge_r_offset : i8 = r_offset - hex_axial.y as i8;
-
-        let world_position : Vec3 = Self::getEdges(center, 
-            Self::edgeIFromOffset(edge_q_offset, edge_r_offset, is_north, is_west, is_east));
-
-        return world_position;
+        let hex_axial : Option<Vec2> = Self::hexWorldToAxial(center);
+        match hex_axial {
+            Some(axial) => {
+                let edge_q_offset : i8 = q_offset - axial.x as i8;
+                let edge_r_offset : i8 = r_offset - axial.y as i8;
+        
+                let world_position : Vec3 = Self::getEdges(center, 
+                    Self::edgeIFromOffset(edge_q_offset, edge_r_offset, is_north, is_west, is_east));
+        
+                return Some(world_position);
+            },
+            None => {return None;}
+        }
     }
 
     pub fn vertexQOffsetFromI(i : i8) -> i8
@@ -484,11 +515,11 @@ impl Map
                         Some(ref mut vertices) => {
                             if is_bottom {
                                 vertices[x_vertex_index][y_vertex_index].bottom = 
-                                    Some(Vertex{world_coordinates : corner_vertex, port_data : port_data});
+                                    Some(Vertex{world_coordinates : corner_vertex, port_data : port_data, settlement_data : None});
                             }
                             else {
                                 vertices[x_vertex_index][y_vertex_index].top = 
-                                    Some(Vertex{world_coordinates : corner_vertex, port_data : port_data});
+                                    Some(Vertex{world_coordinates : corner_vertex, port_data : port_data, settlement_data : None});
                             }
                         }
                         None => ()
@@ -510,24 +541,35 @@ impl Map
                     match self.edges {
                         Some(ref mut edges) => {
                             if is_north {
-                                edges[x_edge_index][y_edge_index].north = Some(Edge { world_coordinates: border_edge })
+                                edges[x_edge_index][y_edge_index].north = Some(Edge { world_coordinates: border_edge, road_data: None })
                             }
                             else if is_east {
-                                edges[x_edge_index][y_edge_index].east = Some(Edge { world_coordinates: border_edge })
+                                edges[x_edge_index][y_edge_index].east = Some(Edge { world_coordinates: border_edge, road_data: None })
                             }
                             else if is_west {
-                                edges[x_edge_index][y_edge_index].west = Some(Edge {world_coordinates : border_edge })
+                                edges[x_edge_index][y_edge_index].west = Some(Edge {world_coordinates : border_edge, road_data: None })
                             }
                         },
                         None => ()
                     }
                 }
 
+                let has_robber : bool = q_offset == 0 && r_offset == 0;
+                let resource_type : ResourceType = 
+                    common::common::IntToResourceType(rand::thread_rng().gen_range(1..ResourceType::Anything as i8));
+                let dice_a : i8 = rand::thread_rng().gen_range(1..7);
+                let dice_b : i8 = rand::thread_rng().gen_range(1..7);
+
                 match self.hexes{
                     Some(ref mut hexes) => {
                         hexes[x_index][y_index] = 
                             Some(Hex{
-                                    center_coordinates : world_position
+                                    center_coordinates : world_position,
+                                    hex_data : HexData{
+                                        resource : resource_type,
+                                        dice_num : (dice_a + dice_b),
+                                        has_robber : has_robber
+                                    }
                                 }
                             );
                     },
