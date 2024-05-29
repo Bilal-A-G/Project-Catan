@@ -1,5 +1,6 @@
 use bevy::math::{vec2, vec3, Vec2, Vec3};
 use bevy::ecs::system::{Resource, Res, Commands};
+use bevy::render::render_resource::encase::rts_array::Length;
 use bevy::transform::components::Transform;
 use bevy::scene::{Scene, SceneBundle};
 use bevy::asset::{self, AssetServer};
@@ -24,8 +25,8 @@ const CLOSENESS_THRESHOLD : f32 = 0.3f32;
 #[derive(Clone)]
 pub struct Vertex 
 {
-    world_coordinates : Vec3,
-    port_data : Option<PortData>
+    pub world_coordinates : Vec3,
+    pub port_data : Option<PortData>
 }
 
 pub struct PortPosition
@@ -43,8 +44,8 @@ pub struct Edge
 #[derive(Clone)]
 pub struct HexVertex 
 {
-    top : Option<Vertex>,
-    bottom : Option<Vertex>
+    pub top : Option<Vertex>,
+    pub bottom : Option<Vertex>
 }
 
 #[derive(Copy, Clone)]
@@ -64,9 +65,9 @@ pub struct Hex
 #[derive(Resource)]
 pub struct Map
 {
-    hexes : Option<Vec<Vec<Option<Hex>>>>,
-    vertices : Option<Vec<Vec<HexVertex>>>,
-    edges : Option<Vec<Vec<HexEdge>>>,
+    pub hexes : Option<Vec<Vec<Option<Hex>>>>,
+    pub vertices : Option<Vec<Vec<HexVertex>>>,
+    pub edges : Option<Vec<Vec<HexEdge>>>,
 
     ports : Vec<PortData>,
     port_vertices : Vec<PortPosition>
@@ -91,44 +92,43 @@ impl Map
                 ((MAP_SIZE * 2 + 1) + 2) as usize
             ]),
             ports: vec![
-                PortData{input: ResourceType::Anything, num_inputs : 3}, 
-                PortData{input: ResourceType::Anything, num_inputs : 3},
-                PortData{input: ResourceType::Anything, num_inputs : 3}, 
-                PortData{input: ResourceType::Anything, num_inputs : 3},
-
-                PortData{input: ResourceType::Wood, num_inputs : 2}, 
-                PortData{input: ResourceType::Sheep, num_inputs : 2},
-                PortData{input: ResourceType::Brick, num_inputs : 2},
                 PortData{input: ResourceType::Wheat, num_inputs : 2},
+                PortData{input: ResourceType::Anything, num_inputs : 3}, 
+                PortData{input: ResourceType::Wood, num_inputs : 2}, 
+                PortData{input: ResourceType::Brick, num_inputs : 2},
+                PortData{input: ResourceType::Anything, num_inputs : 3},
+                PortData{input: ResourceType::Anything, num_inputs : 3}, 
+                PortData{input: ResourceType::Sheep, num_inputs : 2},
+                PortData{input: ResourceType::Anything, num_inputs : 3},
                 PortData{input: ResourceType::Stone, num_inputs : 2}
                 ],
             port_vertices: vec![
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(1f32, -2f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(1f32, -3f32), is_bottom: true},
 
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(2f32, -2f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(3f32, -3f32), is_bottom: true},
 
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(3f32, -2f32), is_bottom: true},
+                PortPosition{axial_coordinates : vec2(2f32, 0f32), is_bottom: false},
 
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(2f32, 0f32), is_bottom: true},
+                PortPosition{axial_coordinates : vec2(1f32, 2f32), is_bottom: false},
 
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(0f32, 3f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(0f32, 2f32), is_bottom: true},
 
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(-2f32, 1f32), is_bottom: true},
+                PortPosition{axial_coordinates : vec2(-3f32, 2f32), is_bottom: false},
 
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(-1f32, -2f32), is_bottom: true},
+                PortPosition{axial_coordinates : vec2(-1f32, -1f32), is_bottom: false},
 
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false},
-                PortPosition{axial_coordinates : vec2(0f32, 0f32), is_bottom: false}
+                PortPosition{axial_coordinates : vec2(-3f32, 1f32), is_bottom: false},
+                PortPosition{axial_coordinates : vec2(-2f32, -1f32), is_bottom: true},
+
+                PortPosition{axial_coordinates : vec2(-1f32, 2f32), is_bottom: true},
+                PortPosition{axial_coordinates : vec2(-2f32, 3f32), is_bottom: false}
             ]
         }
     }
@@ -461,19 +461,34 @@ impl Map
 
                     let x_vertex_index : usize = (q_vertex_offset + MAP_SIZE + 1) as usize; 
                     let y_vertex_index : usize = (r_vertex_index + MAP_SIZE + 1) as usize;
+                    let mut port_data : Option<PortData> = None;
 
-                    //let calculated_world_pos : Vec3 = Self::vertexAxialToWorld(q_vertex_offset, r_vertex_index, world_position, is_bottom);
-                    //println!("World X = {}, World Y = {}, Calc World X = {}, Calc World Y = {}", corner_vertex.x, corner_vertex.z, calculated_world_pos.x, calculated_world_pos.z);
+                    for j in 0 .. self.port_vertices.length() {
+                        let port_position : &PortPosition = &self.port_vertices[j];
+                        if (q_vertex_offset as f32 == port_position.axial_coordinates.x) && 
+                        (r_vertex_index as f32 == port_position.axial_coordinates.y) {
+                            if port_position.is_bottom == is_bottom {
+                                let mut index : usize = 0;
+                                if j % 2 == 0 {
+                                    index = (j / 2) as usize;
+                                }
+                                else {
+                                    index = ((j - 1) / 2) as usize;
+                                }
+                                port_data = Some(self.ports[index]);
+                            }
+                        }
+                    }
 
                     match self.vertices {
                         Some(ref mut vertices) => {
                             if is_bottom {
                                 vertices[x_vertex_index][y_vertex_index].bottom = 
-                                    Some(Vertex{world_coordinates : corner_vertex, port_data : None});
+                                    Some(Vertex{world_coordinates : corner_vertex, port_data : port_data});
                             }
                             else {
                                 vertices[x_vertex_index][y_vertex_index].top = 
-                                    Some(Vertex{world_coordinates : corner_vertex, port_data : None});
+                                    Some(Vertex{world_coordinates : corner_vertex, port_data : port_data});
                             }
                         }
                         None => ()
@@ -491,19 +506,6 @@ impl Map
 
                     let x_edge_index : usize = (q_edge_offset + MAP_SIZE + 1) as usize; 
                     let y_edge_index : usize = (r_edge_offset + MAP_SIZE + 1) as usize;
-
-                    //let cube_coords : Vec3 = Self::edgeToCube(i, q_offset, r_offset);
-                    //println!("X = {}, Y = {}, Z = {}", cube_coords.x, cube_coords.y, cube_coords.z);
-
-                    //println!("Edge Q = {}, Edge R = {}, IsNorth = {}, IsWest = {}, IsEast = {}", 
-                        //q_edge_offset, r_edge_offset, is_north, is_west, is_east);
-
-                    //let calculated_offset : Vec2 = Self::edgeWorldToAxial(border_edge).0;
-                    //println!("X = {}, Y = {}, Calc X = {}, CalcY = {}", q_edge_offset, r_edge_offset, 
-                        //calculated_offset.x, calculated_offset.y);
-
-                    //let calculated_world_pos : Vec3 = Self::edgeAxialToWorld(q_edge_offset, r_edge_offset, world_position, is_north, is_west, is_east);
-                    //println!("World X = {}, World Y = {}, Calc World X = {}, Calc World Y = {}", border_edge.x, border_edge.z, calculated_world_pos.x, calculated_world_pos.z);
 
                     match self.edges {
                         Some(ref mut edges) => {

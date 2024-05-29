@@ -3,7 +3,7 @@ use bevy::math::Vec3;
 pub mod common 
 {
     #[repr(u8)]
-    #[derive(Clone)]
+    #[derive(Copy, Clone)]
     pub enum ResourceType{
         Nothing,
         Wood,
@@ -15,7 +15,7 @@ pub mod common
         Water
     }
     
-    #[derive(Clone)]
+    #[derive(Copy, Clone)]
     pub struct PortData {
         pub input : ResourceType,
         pub num_inputs : i8

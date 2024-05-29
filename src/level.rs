@@ -13,6 +13,8 @@ use bevy::render::camera::Camera;
 use bevy::ecs::event::EventReader;
 use bevy::window::CursorMoved;
 
+use crate::map::HexVertex;
+
 use super::map;
 
 pub fn create_level(mut command_queue : Commands, asset_server : Res<AssetServer>, mut map : ResMut<map::Map>)
@@ -50,7 +52,29 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
                      map::Map::vertexWorldToAxial(vec3(value.origin.x, 0f32, value.origin.z));
                 match vertex_axial {
                     Some(value) =>{
-                        println!("Cursor moved to vertex! q: {} r: {} isBottom: {}", value.0.x, value.0.y, value.1);
+                        match &map.vertices {
+                            Some(vertices) => {
+                                let vertex;
+                                if value.1 == true {
+                                    vertex = &vertices[(value.0.x + 3f32) as usize][(value.0.y + 3f32) as usize].bottom;
+                                }
+                                else {
+                                    vertex = &vertices[(value.0.x + 3f32) as usize][(value.0.y + 3f32) as usize].top;
+                                }
+                                match vertex {
+                                    Some(valid_vertex) => {
+                                        match valid_vertex.port_data {
+                                            Some(port_data) => {
+                                                println!("Cursor moved to vertex with resource! q: {} r: {} Port Resource: {}", value.0.x, value.0.y, port_data.input as i8);
+                                            },
+                                            None =>()
+                                        }
+                                    },
+                                    None => ()
+                                }
+                            },
+                            None => ()
+                        }
                     }
                     None => ()
                 }
