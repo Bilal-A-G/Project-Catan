@@ -14,6 +14,7 @@ use bevy::ecs::event::EventReader;
 use bevy::window::CursorMoved;
 
 use crate::map::HexVertex;
+use crate::map::Map;
 
 use super::map;
 
@@ -51,8 +52,25 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
                 let vertex_axial : Option<(Vec2, bool)> =
                      map::Map::vertexWorldToAxial(vec3(value.origin.x, 0f32, value.origin.z));
                 let hex_axial : Option<Vec2> = map::Map::hexWorldToAxial(vec3(value.origin.x, 0f32, value.origin.z));
-                
-                 match vertex_axial {
+                match hex_axial {
+                    Some(value) => {
+                        let hex_axial_rounded : Vec2 = Map::hexAxialRound(value);
+                        match &map.hexes {
+                            Some(hexes) => {
+                                match hexes[(hex_axial_rounded.x + 2f32) as usize][(hex_axial_rounded.y + 2f32) as usize] {
+                                    Some(valid_hex) => {
+                                        //println!("Cursor moved to hex with resource : {}, dice number : {}, has robber : {}, axial x : {}, axial y : {}", 
+                                            //valid_hex.hex_data.resource as i8, valid_hex.hex_data.dice_num, valid_hex.hex_data.has_robber, hex_axial_rounded.x, hex_axial_rounded.y)
+                                    },
+                                    None => ()
+                                }
+                            },
+                            None => ()
+                        }
+                    },
+                    None => ()
+                }
+                match vertex_axial {
                     Some(value) =>{
                         match &map.vertices {
                             Some(vertices) => {
