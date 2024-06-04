@@ -48,7 +48,8 @@ pub struct Edge
 pub struct HexVertex 
 {
     pub top : Option<Vertex>,
-    pub bottom : Option<Vertex>
+    pub bottom : Option<Vertex>,
+    pub center : Vec3
 }
 
 #[derive(Copy, Clone)]
@@ -69,9 +70,9 @@ pub struct Hex
 #[derive(Resource)]
 pub struct Map
 {
-    pub hexes : Option<Vec<Vec<Option<Hex>>>>,
-    pub vertices : Option<Vec<Vec<HexVertex>>>,
-    pub edges : Option<Vec<Vec<HexEdge>>>,
+    pub hexes : Vec<Vec<Option<Hex>>>,
+    pub vertices : Vec<Vec<HexVertex>>,
+    pub edges : Vec<Vec<HexEdge>>,
 
     ports : Vec<PortData>,
     port_vertices : Vec<PortPosition>
@@ -83,18 +84,18 @@ impl Map
     {
         Map 
         { 
-            hexes: Some(vec![
+            hexes: vec![
                 vec![None; (MAP_SIZE * 2 + 1) as usize]; 
                 (MAP_SIZE * 2 + 1) as usize
-            ]),
-            vertices: Some(vec![
-                vec![HexVertex{top : None, bottom : None}; ((MAP_SIZE * 2 + 1) + 2) as usize];
+            ],
+            vertices: vec![
+                vec![HexVertex{top : None, bottom : None, center : vec3(0f32, 0f32, 0f32)}; ((MAP_SIZE * 2 + 1) + 2) as usize];
                 ((MAP_SIZE * 2 + 1) + 2) as usize               
-            ]),
-            edges: Some(vec![
+            ],
+            edges: vec![
                 vec![HexEdge{north : None, west : None, east : None}; ((MAP_SIZE * 2 + 1) + 2) as usize];
                 ((MAP_SIZE * 2 + 1) + 2) as usize
-            ]),
+            ],
             ports: vec![
                 PortData{input: ResourceType::Wheat, num_inputs : 2},
                 PortData{input: ResourceType::Anything, num_inputs : 3}, 
@@ -158,6 +159,95 @@ impl Map
         }
 
         return rounded_axial;
+    }
+
+    //Returns a clone of the vertex in array, you cannot modify it
+    pub fn getVertexFromAxial(&self, axial : Vec2, is_bottom : bool) -> Option<Vertex>
+    {
+        let vertex_index : Vec2 = axial + vec2(3f32, 3f32);
+        if (vertex_index.x < 0f32 || vertex_index.x > (self.vertices.len() - 1) as f32) || 
+            (vertex_index.y < 0f32 || vertex_index.y > (self.vertices.len() - 1) as f32)
+        {
+            return None;
+        }
+
+        let hex_vertex = &self.vertices[vertex_index.x as usize][vertex_index.y as usize];
+        if is_bottom {
+            match &hex_vertex.bottom {
+                Some(valid_vertex) => {
+                    return Some(valid_vertex.clone());
+                },
+                None => {return None;}
+            }
+        }
+        else {
+            match &hex_vertex.top {
+                Some(valid_vertex) => {
+                    return Some(valid_vertex.clone());
+                },
+                None => {return None;}
+            }
+        }
+    }
+
+    pub fn getHexFromAxial(&self, axial : Vec2) -> Option<Hex>
+    {
+        let hex_index : Vec2 = axial + vec2(2f32, 2f32);
+
+        if (hex_index.x < 0f32 || hex_index.x > (self.hexes.len() - 1) as f32) || 
+        (hex_index.y < 0f32 || hex_index.y > (self.hexes.len() - 1) as f32)
+        {
+            return None;
+        }
+
+        let hex : Option<Hex> = self.hexes[hex_index.x as usize][hex_index.y as usize];
+        return hex;
+    }
+
+    pub fn getVertexNeighbourAxials(&self, axial : Vec2, is_bottom : bool) -> Vec<(Vec2, bool)>
+    {
+        let mut neighbours : Vec<(Vec2, bool)> = Vec::new();
+        let mut offsets : Vec<Vec2> = Vec::new();
+        offsets.push(vec2(1.0f32, -2.0f32));
+        offsets.push(vec2(0.0f32, -1.0f32));
+        offsets.push(vec2(1.0f32, -1.0f32));
+
+        for i in 0 .. offsets.len() {
+            let multiplier : f32 = if is_bottom {-1 as f32} else {1 as f32};
+            let neighbour_offset : Vec2 = axial + offsets[i] * multiplier;
+            let neighbour_vertex : Option<Vertex> = Self::getVertexFromAxial(&self, neighbour_offset, !is_bottom);
+            match neighbour_vertex {
+                Some(_) => {
+                    neighbours.push((neighbour_offset, !is_bottom));
+                },
+                None => ()
+            }
+        }
+
+        return neighbours; 
+    }
+
+    pub fn getVertexTouchingHexAxials(&self, axial : Vec2, is_bottom : bool) -> Vec<Vec2>
+    {
+        let mut touching_hexes : Vec<Vec2> = Vec::new();
+        let mut offsets : Vec<Vec2> = Vec::new();
+        offsets.push(vec2(1f32, -1f32));
+        offsets.push(vec2(0f32, 0f32));
+        offsets.push(vec2(0f32, -1f32));
+
+        for i in 0..offsets.len() {
+            let multiplier : f32 = if is_bottom {-1 as f32} else {1 as f32};
+            let touching_hex_offset : Vec2 = axial + offsets[i] * multiplier;
+            let touching_hex : Option<Hex> = self.getHexFromAxial(touching_hex_offset);
+            match touching_hex {
+                Some(_) => {
+                    touching_hexes.push(touching_hex_offset);
+                },
+                None => ()
+            }
+        }
+
+        return touching_hexes;
     }
 
     pub fn hexWorldToAxial(world : Vec3) -> Option<Vec2>
@@ -510,19 +600,14 @@ impl Map
                             }
                         }
                     }
-
-                    match self.vertices {
-                        Some(ref mut vertices) => {
-                            if is_bottom {
-                                vertices[x_vertex_index][y_vertex_index].bottom = 
-                                    Some(Vertex{world_coordinates : corner_vertex, port_data : port_data, settlement_data : None});
-                            }
-                            else {
-                                vertices[x_vertex_index][y_vertex_index].top = 
-                                    Some(Vertex{world_coordinates : corner_vertex, port_data : port_data, settlement_data : None});
-                            }
-                        }
-                        None => ()
+                    self.vertices[x_vertex_index][y_vertex_index].center = world_position;
+                    if is_bottom {
+                        self.vertices[x_vertex_index][y_vertex_index].bottom = 
+                            Some(Vertex{world_coordinates : corner_vertex, port_data : port_data, settlement_data : None});
+                    }
+                    else {
+                        self.vertices[x_vertex_index][y_vertex_index].top = 
+                            Some(Vertex{world_coordinates : corner_vertex, port_data : port_data, settlement_data : None});
                     }
                 }
 
@@ -538,19 +623,14 @@ impl Map
                     let x_edge_index : usize = (q_edge_offset + MAP_SIZE + 1) as usize; 
                     let y_edge_index : usize = (r_edge_offset + MAP_SIZE + 1) as usize;
 
-                    match self.edges {
-                        Some(ref mut edges) => {
-                            if is_north {
-                                edges[x_edge_index][y_edge_index].north = Some(Edge { world_coordinates: border_edge, road_data: None })
-                            }
-                            else if is_east {
-                                edges[x_edge_index][y_edge_index].east = Some(Edge { world_coordinates: border_edge, road_data: None })
-                            }
-                            else if is_west {
-                                edges[x_edge_index][y_edge_index].west = Some(Edge {world_coordinates : border_edge, road_data: None })
-                            }
-                        },
-                        None => ()
+                    if is_north {
+                        self.edges[x_edge_index][y_edge_index].north = Some(Edge { world_coordinates: border_edge, road_data: None })
+                    }
+                    else if is_east {
+                        self.edges[x_edge_index][y_edge_index].east = Some(Edge { world_coordinates: border_edge, road_data: None })
+                    }
+                    else if is_west {
+                        self.edges[x_edge_index][y_edge_index].west = Some(Edge {world_coordinates : border_edge, road_data: None })
                     }
                 }
 
@@ -563,21 +643,16 @@ impl Map
                 let dice_a : i8 = rand::thread_rng().gen_range(1..7);
                 let dice_b : i8 = rand::thread_rng().gen_range(1..7);
 
-                match self.hexes{
-                    Some(ref mut hexes) => {
-                        hexes[x_index][y_index] = 
-                            Some(Hex{
-                                    center_coordinates : world_position,
-                                    hex_data : HexData{
-                                        resource : resource_type,
-                                        dice_num : (dice_a + dice_b),
-                                        has_robber : has_robber
-                                    }
-                                }
-                            );
-                    },
-                    None => ()
-                }
+                self.hexes[x_index][y_index] = 
+                Some(Hex{
+                        center_coordinates : world_position,
+                        hex_data : HexData{
+                            resource : resource_type,
+                            dice_num : (dice_a + dice_b),
+                            has_robber : has_robber
+                        }
+                    }
+                );
             }
         }
     }
