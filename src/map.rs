@@ -23,7 +23,7 @@ const VERTICAL_DISTANCE : f32 = 3f32/4f32 * HEX_HEIGHT;
 
 const CLOSENESS_THRESHOLD : f32 = 0.3f32;
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Vertex 
 {
     pub world_coordinates : Vec3,
@@ -55,9 +55,9 @@ pub struct HexVertex
 #[derive(Copy, Clone)]
 pub struct HexEdge
 {
-    north : Option<Edge>,
-    west : Option<Edge>,
-    east : Option<Edge>
+    pub north : Option<Edge>,
+    pub west : Option<Edge>,
+    pub east : Option<Edge>
 }
 
 #[derive(Copy, Clone)]
@@ -164,7 +164,7 @@ impl Map
     //Returns a clone of the vertex in array, you cannot modify it
     pub fn getVertexFromAxial(&self, axial : Vec2, is_bottom : bool) -> Option<Vertex>
     {
-        let vertex_index : Vec2 = axial + vec2(3f32, 3f32);
+        let vertex_index : Vec2 = axial + vec2(MAP_SIZE as f32 + 1f32, MAP_SIZE as f32 + 1f32);
         if (vertex_index.x < 0f32 || vertex_index.x > (self.vertices.len() - 1) as f32) || 
             (vertex_index.y < 0f32 || vertex_index.y > (self.vertices.len() - 1) as f32)
         {
@@ -173,26 +173,16 @@ impl Map
 
         let hex_vertex = &self.vertices[vertex_index.x as usize][vertex_index.y as usize];
         if is_bottom {
-            match &hex_vertex.bottom {
-                Some(valid_vertex) => {
-                    return Some(valid_vertex.clone());
-                },
-                None => {return None;}
-            }
+            return hex_vertex.bottom;
         }
         else {
-            match &hex_vertex.top {
-                Some(valid_vertex) => {
-                    return Some(valid_vertex.clone());
-                },
-                None => {return None;}
-            }
+            return hex_vertex.top;
         }
     }
 
     pub fn getHexFromAxial(&self, axial : Vec2) -> Option<Hex>
     {
-        let hex_index : Vec2 = axial + vec2(2f32, 2f32);
+        let hex_index : Vec2 = axial + vec2(MAP_SIZE as f32, MAP_SIZE as f32);
 
         if (hex_index.x < 0f32 || hex_index.x > (self.hexes.len() - 1) as f32) || 
         (hex_index.y < 0f32 || hex_index.y > (self.hexes.len() - 1) as f32)
@@ -202,6 +192,27 @@ impl Map
 
         let hex : Option<Hex> = self.hexes[hex_index.x as usize][hex_index.y as usize];
         return hex;
+    }
+
+    pub fn getEdgeFromAxial(&self, axial : Vec2, is_north : bool, is_west : bool, is_east : bool) -> Option<Edge>
+    {
+        let edge_index : Vec2 = axial + vec2(MAP_SIZE as f32 + 1f32, MAP_SIZE as f32 + 1f32);
+        if (edge_index.x < 0f32 || edge_index.x > (self.edges.len() - 1) as f32) || 
+        (edge_index.y < 0f32 || edge_index.y > (self.edges.len() - 1) as f32)
+        {
+            return None;
+        }
+
+        let edge : HexEdge = self.edges[edge_index.x as usize][edge_index.y as usize];
+        if is_north {
+            return edge.north;
+        }
+        else if is_east {
+            return edge.east;
+        }
+        else {
+            return edge.west;
+        }
     }
 
     pub fn getVertexNeighbourAxials(&self, axial : Vec2, is_bottom : bool) -> Vec<(Vec2, bool)>
@@ -248,6 +259,52 @@ impl Map
         }
 
         return touching_hexes;
+    }
+
+    pub fn getVertexProtrudingEdgeAxials(&self, axial : Vec2, is_bottom : bool) -> Vec<(Vec2, bool, bool, bool)>
+    {
+        let mut protruding_edges : Vec<(Vec2, bool, bool, bool)> = Vec::new();
+        let north_edge;
+        let west_edge;
+        let east_edge;
+
+        if is_bottom {
+            north_edge = (axial + vec2(0f32, 1f32), false, true, false);
+            west_edge = (axial + vec2(-1f32, 1f32), false, false, true);
+            east_edge = (axial+ vec2(0f32, 1f32), true, false, false);
+        }
+        else {
+            north_edge = (axial + vec2(0f32, -1f32), false, true, false);
+            west_edge = (axial, true, false, false);
+            east_edge = (axial, false, false, true);
+        }
+
+        let protruding_north_edge = 
+            self.getEdgeFromAxial(north_edge.0, north_edge.1, north_edge.2, north_edge.3);
+        let protruding_west_edge = 
+            self.getEdgeFromAxial(west_edge.0, west_edge.1, west_edge.2, west_edge.3);
+        let protruding_east_edge = 
+            self.getEdgeFromAxial(east_edge.0, east_edge.1, east_edge.2, east_edge.3);
+
+        match protruding_north_edge {
+            Some(_) => {
+                protruding_edges.push(north_edge);
+            },
+            None => ()
+        }
+        match protruding_west_edge {
+            Some(_) => {
+                protruding_edges.push(west_edge);
+            },
+            None => ()
+        }
+        match protruding_east_edge {
+            Some(_) => {
+                protruding_edges.push(east_edge);
+            },
+            None => ()
+        }
+        return protruding_edges;
     }
 
     pub fn hexWorldToAxial(world : Vec3) -> Option<Vec2>
@@ -304,7 +361,7 @@ impl Map
 
     pub fn edgeWorldToAxial(world : Vec3) -> Option<(Vec2, bool, bool, bool)>
     {
-        let mut hex_frac_axial : Option<Vec2> = Self::hexWorldToAxial(world);
+        let hex_frac_axial : Option<Vec2> = Self::hexWorldToAxial(world);
         match hex_frac_axial {
             Some(axial) => {
                 let rounded_hex_axial : Vec2 = Self::hexAxialRound(axial);
@@ -412,23 +469,30 @@ impl Map
 
     pub fn edgeQOffsetFromI(i : i8) -> i8 
     {
-        if i == 0 || i == 2 || i == 3 || i == 4{
+        if i == 2 || i == 3 || i == 4 {
             return 0;
         }
-        else if i == 1{
+        if i == 0{
             return -1;
         }
+        else if i == 1{
+            return 0;
+        }
         else {
-            return 1;
+            return -1;
         }
     }
 
     pub fn edgeROffsetFromI(i : i8) -> i8 
     {
-        if i == 1 || i == 2 || i == 3 || i == 4{
+        if i == 5 || i == 2 || i == 4 || i == 3 {
             return 0;
         }
+        if i == 0 || i == 1 {
+            return 1;
+        }
         else {
+            println!("Edge R cannot be found from I!");
             return -1;
         }
     }

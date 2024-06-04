@@ -13,7 +13,7 @@ use bevy::render::camera::Camera;
 use bevy::ecs::event::EventReader;
 use bevy::window::CursorMoved;
 
-use crate::map::HexVertex;
+use crate::map::{Edge, HexVertex};
 use crate::map::Map;
 
 use super::map;
@@ -52,6 +52,7 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
                 let vertex_axial : Option<(Vec2, bool)> =
                      map::Map::vertexWorldToAxial(vec3(value.origin.x, 0f32, value.origin.z));
                 let hex_axial : Option<Vec2> = map::Map::hexWorldToAxial(vec3(value.origin.x, 0f32, value.origin.z));
+                let edge_axial : Option<(Vec2, bool, bool, bool)> = map::Map::edgeWorldToAxial(vec3(value.origin.x, 0f32, value.origin.z));
                 match hex_axial {
                     Some(value) => {
                         let hex_axial_rounded : Vec2 = Map::hexAxialRound(value);
@@ -59,6 +60,29 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
                             Some(valid_hex) => {
                                 //println!("Cursor moved to hex with resource : {}, dice number : {}, has robber : {}, axial x : {}, axial y : {}", 
                                     //valid_hex.hex_data.resource as i8, valid_hex.hex_data.dice_num, valid_hex.hex_data.has_robber, hex_axial_rounded.x, hex_axial_rounded.y)
+                            },
+                            None => ()
+                        }
+                    },
+                    None => ()
+                }
+                match edge_axial {
+                    Some(value) => {
+                        let edge : &Option<Edge>;
+                        let hex_edge = &map.edges[(value.0.x + 3f32) as usize][(value.0.y + 3f32) as usize];
+                        if value.1 == true {
+                            edge = &hex_edge.north;
+                        }
+                        else if value.2 == true {
+                            edge = &hex_edge.west;
+                        }
+                        else {
+                            edge = &hex_edge.east;
+                        }
+
+                        match edge {
+                            Some(valid_edge) => {
+                                println!("Cursor moved to edge q: {}, r: {}", value.0.x, value.0.y);
                             },
                             None => ()
                         }
@@ -77,17 +101,27 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
                         }
                         match vertex {
                             Some(valid_vertex) => {
+                                //println!("Cursor moved to vertex q: {}, r: {}", value.0.x, value.0.y);
+
                                 let vertex_neighbours = map.getVertexNeighbourAxials(value.0, value.1);
-                                println!("Cursor moved to vertex q: {}, r: {}", value.0.x, value.0.y);
                                 for i in 0..vertex_neighbours.len() {
                                     //println!("Vertex has neighbour with q: {}, r: {}", 
                                         //vertex_neighbours[i].0.x, vertex_neighbours[i].0.y);
                                 }
+
                                 let vertexTouchingHexes = map.getVertexTouchingHexAxials(value.0, value.1);
                                 for i in 0 .. vertexTouchingHexes.len(){
-                                    println!("Vertex is touching hex with q: {}, r: {}", 
-                                        vertexTouchingHexes[i].x, vertexTouchingHexes[i].y);
+                                    //println!("Vertex is touching hex with q: {}, r: {}", 
+                                        //vertexTouchingHexes[i].x, vertexTouchingHexes[i].y);
                                 }
+
+                                let vertexProtrudingEdges = 
+                                    map.getVertexProtrudingEdgeAxials(value.0, value.1);
+                                for i in 0.. vertexProtrudingEdges.len() {
+                                    //println!("Vertex has protruding edge with q: {}, r: {}, isnorth: {}, iswest: {}", 
+                                        //vertexProtrudingEdges[i].0.x, vertexProtrudingEdges[i].0.y, vertexProtrudingEdges[i].1, vertexProtrudingEdges[i].2);
+                                }
+
                                 match valid_vertex.port_data {
                                     Some(port_data) => {
                                         //println!("Cursor moved to vertex with resource! q: {} r: {} Port Resource: {}", value.0.x, value.0.y, port_data.input as i8);
