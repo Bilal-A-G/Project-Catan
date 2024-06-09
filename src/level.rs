@@ -82,7 +82,22 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
 
                         match edge {
                             Some(valid_edge) => {
-                                //println!("Cursor moved to edge q: {}, r: {}, north:{}, west:{}", value.0.x, value.0.y, value.1, value.2);
+                                println!("Cursor moved to edge q: {}, r: {}, north: {}, west: {}", value.0.x, value.0.y, value.1, value.2);
+                                
+                                let edge_neighbours = 
+                                    map.getEdgeNeighbouringEdgeAxials(value.0, value.1, value.2, value.3);
+                                for i in 0 .. edge_neighbours.len() {
+                                    let current_neighbour = edge_neighbours[i];
+                                    //println!("Edge has neighbour q: {}, r: {}, north: {}, west: {}", 
+                                        //current_neighbour.0.x, current_neighbour.0.y, current_neighbour.1, current_neighbour.2);
+                                }
+
+                                let edge_end_points = 
+                                    map.getEdgeEndPointAxials(value.0, value.1, value.2, value.3);
+                                for i in 0 .. edge_end_points.len() {
+                                    //println!("Edge has end point q: {}, r: {}, isbottom: {}", 
+                                        //edge_end_points[i].0.x, edge_end_points[i].0.y, edge_end_points[i].1);
+                                }
                             },
                             None => ()
                         }
@@ -118,8 +133,8 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
                                 let vertexProtrudingEdges = 
                                     map.getVertexProtrudingEdgeAxials(value.0, value.1);
                                 for i in 0.. vertexProtrudingEdges.len() {
-                                    println!("Vertex has protruding edge with q: {}, r: {}, isnorth: {}, iswest: {}", 
-                                        vertexProtrudingEdges[i].0.x, vertexProtrudingEdges[i].0.y, vertexProtrudingEdges[i].1, vertexProtrudingEdges[i].2);
+                                    //println!("Vertex has protruding edge with q: {}, r: {}, isnorth: {}, iswest: {}", 
+                                        //vertexProtrudingEdges[i].0.x, vertexProtrudingEdges[i].0.y, vertexProtrudingEdges[i].1, vertexProtrudingEdges[i].2);
                                 }
 
                                 match valid_vertex.port_data {

@@ -307,6 +307,102 @@ impl Map
         return protruding_edges;
     }
 
+    pub fn getEdgeNeighbouringEdgeAxials(&self, axial : Vec2, is_north : bool, is_west : bool, is_east : bool) -> Vec<(Vec2, bool, bool, bool)>
+    {
+        let mut neighbouring_edges : Vec<(Vec2, bool, bool, bool)> = Vec::new();
+        let top_left_edge;
+        let top_right_edge;
+        let bottom_left_edge;
+        let bottom_right_edge;
+
+        if is_north {
+            top_left_edge = (axial + vec2(1f32, 0f32), false, false, true);
+            top_right_edge = (axial + vec2(0f32, 0f32), false, true, false);
+            bottom_left_edge = (axial + vec2(0f32, 0f32), false, false, true);
+            bottom_right_edge = (axial + vec2(0f32, -1f32), false, true, false);
+        }
+        else if is_west{
+            top_left_edge = (axial + vec2(0f32, 0f32), true, false, false);
+            top_right_edge = (axial + vec2(1f32, 0f32), false, false, true);
+            bottom_left_edge = (axial + vec2(0f32, 1f32), true, false, false);
+            bottom_right_edge = (axial + vec2(0f32, 1f32), false, false, true);
+        }
+        else {
+            top_left_edge = (axial + vec2(0f32, 0f32), true, false, false);
+            top_right_edge = (axial + vec2(0f32, -1f32), false, true, false);
+            bottom_left_edge = (axial + vec2(-1f32, 0f32), true, false, false);
+            bottom_right_edge = (axial + vec2(-1f32, 0f32), false, true, false);
+        }
+
+        let top_left = 
+        self.getEdgeFromAxial(top_left_edge.0, top_left_edge.1, top_left_edge.2, top_left_edge.3);
+        let top_right = 
+        self.getEdgeFromAxial(top_right_edge.0, top_right_edge.1, top_right_edge.2, top_right_edge.3);
+        let bottom_left = 
+        self.getEdgeFromAxial(bottom_left_edge.0, bottom_left_edge.1, bottom_left_edge.2, bottom_left_edge.3);
+        let bottom_right = 
+        self.getEdgeFromAxial(bottom_right_edge.0, bottom_right_edge.1, bottom_right_edge.2, bottom_right_edge.3);
+
+        match top_left {
+            Some(_) => {
+                neighbouring_edges.push(top_left_edge);
+            },
+            None => ()
+        }
+        match top_right {
+            Some(_) => {
+                neighbouring_edges.push(top_right_edge);
+            },
+            None => ()
+        }
+        match bottom_left {
+            Some(_) => {
+                neighbouring_edges.push(bottom_left_edge);
+            },
+            None => ()
+        }
+        match bottom_right {
+            Some(_) => {
+                neighbouring_edges.push(bottom_right_edge);
+            },
+            None => ()
+        }
+        return neighbouring_edges;
+    }
+
+    pub fn getEdgeEndPointAxials(&self, axial : Vec2, is_north : bool, is_west : bool, is_east : bool) -> Vec<(Vec2, bool)> 
+    {
+        let mut end_points : Vec<(Vec2, bool)> = Vec::new();
+        let mut start_point : (Vec2, bool);
+        let mut end_point : (Vec2, bool);
+
+        if is_north {
+            start_point = (axial + vec2(1f32, -1f32), true);
+            end_point = (axial + vec2(0f32, 0f32), false); 
+        }
+        else if is_west {
+            start_point = (axial + vec2(1f32, -1f32), true);
+            end_point = (axial + vec2(0f32, 1f32), false); 
+        }
+        else {
+            start_point = (axial + vec2(0f32, 0f32), false);
+            end_point = (axial + vec2(0f32, -1f32), true); 
+        }
+
+        let end : Option<Vertex> = self.getVertexFromAxial(end_point.0, end_point.1);
+        let start : Option<Vertex> = self.getVertexFromAxial(start_point.0, start_point.1);
+
+        match end {
+            Some(_) => {end_points.push(end_point);},
+            None => ()
+        }
+        match start {
+            Some(_) => {end_points.push(start_point);},
+            None => ()
+        }
+        return end_points;
+    }
+
     pub fn hexWorldToAxial(world : Vec3) -> Option<Vec2>
     {
         let y_axial : f32 = (world.x - INITIAL_TRANSLATION.x) / VERTICAL_DISTANCE;
