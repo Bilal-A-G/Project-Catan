@@ -269,9 +269,9 @@ impl Map
         let east_edge;
 
         if is_bottom {
-            north_edge = (axial + vec2(0f32, 1f32), false, true, false);
-            west_edge = (axial + vec2(-1f32, 1f32), false, false, true);
-            east_edge = (axial+ vec2(0f32, 1f32), true, false, false);
+            north_edge = (axial + vec2(0f32, 1f32), false, false, true);
+            west_edge = (axial + vec2(-1f32, 1f32), false, true, false);
+            east_edge = (axial+ vec2(-1f32, 1f32), true, false, false);
         }
         else {
             north_edge = (axial + vec2(0f32, -1f32), false, true, false);

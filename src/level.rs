@@ -82,7 +82,7 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
 
                         match edge {
                             Some(valid_edge) => {
-                                println!("Cursor moved to edge q: {}, r: {}", value.0.x, value.0.y);
+                                //println!("Cursor moved to edge q: {}, r: {}, north:{}, west:{}", value.0.x, value.0.y, value.1, value.2);
                             },
                             None => ()
                         }
@@ -101,7 +101,7 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
                         }
                         match vertex {
                             Some(valid_vertex) => {
-                                //println!("Cursor moved to vertex q: {}, r: {}", value.0.x, value.0.y);
+                                println!("Cursor moved to vertex q: {}, r: {}", value.0.x, value.0.y);
 
                                 let vertex_neighbours = map.getVertexNeighbourAxials(value.0, value.1);
                                 for i in 0..vertex_neighbours.len() {
@@ -118,8 +118,8 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
                                 let vertexProtrudingEdges = 
                                     map.getVertexProtrudingEdgeAxials(value.0, value.1);
                                 for i in 0.. vertexProtrudingEdges.len() {
-                                    //println!("Vertex has protruding edge with q: {}, r: {}, isnorth: {}, iswest: {}", 
-                                        //vertexProtrudingEdges[i].0.x, vertexProtrudingEdges[i].0.y, vertexProtrudingEdges[i].1, vertexProtrudingEdges[i].2);
+                                    println!("Vertex has protruding edge with q: {}, r: {}, isnorth: {}, iswest: {}", 
+                                        vertexProtrudingEdges[i].0.x, vertexProtrudingEdges[i].0.y, vertexProtrudingEdges[i].1, vertexProtrudingEdges[i].2);
                                 }
 
                                 match valid_vertex.port_data {
