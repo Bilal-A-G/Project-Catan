@@ -13,7 +13,8 @@ use bevy::render::camera::Camera;
 use bevy::ecs::event::EventReader;
 use bevy::window::CursorMoved;
 
-use crate::map::{Edge, HexVertex};
+use crate::common::common::RoadData;
+use crate::map::{Edge, HexEdge, HexVertex};
 use crate::map::Map;
 
 use super::map;
@@ -68,21 +69,34 @@ pub fn mouse_moved(mut cursor_event : EventReader<CursorMoved>, mut window : Que
                 }
                 match edge_axial {
                     Some(value) => {
-                        let edge : &Option<Edge>;
-                        let hex_edge = &map.edges[(value.0.x + 3f32) as usize][(value.0.y + 3f32) as usize];
+                        let edge : Option<Edge>;
+                        let hex_edge : &mut HexEdge = &mut map.edges[(value.0.x + 3f32) as usize][(value.0.y + 3f32) as usize];
+
                         if value.1 == true {
-                            edge = &hex_edge.north;
-                        }
-                        else if value.2 == true {
-                            edge = &hex_edge.west;
-                        }
-                        else {
-                            edge = &hex_edge.east;
-                        }
+                             edge = hex_edge.north;
+                         }
+                         else if value.2 == true {
+                             edge = hex_edge.west;
+                         }
+                         else {
+                             edge = hex_edge.east;
+                         }
+                        
+                        map.edges[(value.0.x + 3f32) as usize][(value.0.y + 3f32) as usize].north = Some(Edge{world_coordinates: vec3(0f32, 0f32, 0f32), road_data: None});
+
 
                         match edge {
-                            Some(valid_edge) => {
-                                println!("Cursor moved to edge q: {}, r: {}, north: {}, west: {}", value.0.x, value.0.y, value.1, value.2);
+                            Some(mut valid_edge) => {
+                                let mut hasRoad : bool = false;
+                                match valid_edge.road_data {
+                                    Some(_) => {
+                                        hasRoad = true;
+                                    },
+                                    None => {hasRoad = false;}
+                                }
+                                valid_edge.road_data = Some(RoadData{player_id: 0});
+
+                                println!("Cursor moved to edge q: {}, r: {}, north: {}, west: {}, has road : {}", value.0.x, value.0.y, value.1, value.2, hasRoad);
                                 
                                 let edge_neighbours = 
                                     map.getEdgeNeighbouringEdgeAxials(value.0, value.1, value.2, value.3);
