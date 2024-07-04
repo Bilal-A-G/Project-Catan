@@ -1,3 +1,6 @@
 C:\Users\bilal\OneDrive\Desktop\Project Catan\ProjectCatan\obj\Debug\ProjectCatan.njsproj.AssemblyReference.cache
 C:\Users\bilal\OneDrive\Desktop\Project Catan\ProjectCatan\obj\Debug\ProjectCatan.njsproj.CoreCompileInputs.cache
 C:\Users\bilal\OneDrive\Desktop\Project Catan\ProjectCatan\bin\Microsoft.NodejsTools.WebRole.dll
+C:\Users\bilal\Project-Catan\obj\Debug\ProjectCatan.njsproj.AssemblyReference.cache
+C:\Users\bilal\Project-Catan\obj\Debug\ProjectCatan.njsproj.CoreCompileInputs.cache
+C:\Users\bilal\Project-Catan\bin\Microsoft.NodejsTools.WebRole.dll
