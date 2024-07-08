@@ -1,0 +1,132 @@
+{
+  "pools": [
+    {
+      "name": "pool1",
+      "entries": [
+        {
+          "entryName": "loottweaker#1",
+          "weight": 85,
+          "quality": 0,
+          "type": "item",
+          "functions": [
+            {
+              "count": {
+                "min": 1.0,
+                "max": 2.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "primitivemobs:wonder_sap"
+        },
+        {
+          "entryName": "loottweaker#5",
+          "weight": 1,
+          "quality": 1000,
+          "type": "item",
+          "functions": [
+            {
+              "count": {
+                "min": 2.0,
+                "max": 4.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "rats:little_black_worm"
+        },
+        {
+          "entryName": "loottweaker#4",
+          "weight": 1,
+          "quality": 1000,
+          "type": "item",
+          "functions": [
+            {
+              "count": {
+                "min": 2.0,
+                "max": 3.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "primitivemobs:wonder_sap"
+        },
+        {
+          "entryName": "loottweaker#3",
+          "weight": 35,
+          "quality": 0,
+          "type": "item",
+          "functions": [
+            {
+              "count": 1.0,
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "contenttweaker:steel_artifact"
+        },
+        {
+          "entryName": "loottweaker#2",
+          "weight": 80,
+          "quality": 0,
+          "type": "item",
+          "functions": [
+            {
+              "count": {
+                "min": 1.0,
+                "max": 4.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "rats:little_black_worm"
+        },
+        {
+          "entryName": "no_drops",
+          "weight": 250,
+          "quality": 0,
+          "type": "empty"
+        },
+        {
+          "entryName": "loottweaker#7",
+          "weight": 1,
+          "quality": 0,
+          "conditions": [
+            {
+              "chance": 0.925,
+              "looting_multiplier": 60.0,
+              "condition": "minecraft:random_chance_with_looting"
+            }
+          ],
+          "type": "item",
+          "functions": [
+            {
+              "count": {
+                "min": 2.0,
+                "max": 5.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "primitivemobs:wonder_sap"
+        },
+        {
+          "entryName": "loottweaker#6",
+          "weight": 2,
+          "quality": 1000,
+          "type": "item",
+          "functions": [
+            {
+              "count": {
+                "min": 1.0,
+                "max": 2.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "contenttweaker:steel_artifact"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ]
+}
