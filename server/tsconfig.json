@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "lib": [ "es6", "DOM" ],
+    "sourceMap": true,
+    "moduleResolution": "Node",
+    "allowSyntheticDefaultImports": true
+  },
+  "exclude": [
+    "node_modules"
+  ],
+  "esModuleInterop": true,
+  "forceConsistentCasingInFileNames": true,
+  "strict": true,
+  "skipDefaultLibCheck": true,
+  "skipLibCheck": true
+}
