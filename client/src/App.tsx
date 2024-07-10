@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Stage } from '@pixi/react';
+import PixiApp from './pixi/Pixi';
 
 function App() {
   function getData(){
@@ -11,7 +13,12 @@ function App() {
     console.log(getData());
   }, [])
   return (
-    <div>App</div>
+    <div>
+      <p>App</p>
+      <Stage width={500} height={500}>
+        <PixiApp/>
+      </Stage>
+    </div>
   );
 }
 
