@@ -1,26 +1,31 @@
 import { Stage, Sprite} from '@pixi/react';
 
 //Convert one of your q or r values to it's corresponding grid index
-const CoordinateToIndex = (coordinate, gridSize) => {
+export function CoordinateToIndex(coordinate, gridSize) {
   return coordinate + gridSize;
 }
 
 //Convert one of your grid indices into it's corresponding q or r value
-const IndexToCoordinate = (index, gridSize) => {
-  return index - coordinate;
+export function IndexToCoordinate(index, gridSize) {
+  return index - gridSize;
+}
+
+//Convert the grid size to the size of an array dimension
+export function ArraySizeFromGridSize(gridSize){
+  return gridSize * 2 + 1;
 }
 
 const DrawMap = (gridSize, xOffset, yOffset) => {
   var gridSpacing = 60;
   var horizSpacing = 54;
-  let hexGrid = new Array(gridSize);
+  let hexGrid = new Array(ArraySizeFromGridSize(gridSize));
 
   for (let q = -gridSize; q < gridSize + 1; q++){
     let startIndex = -Math.min(q + gridSize, gridSize);
     let endIndex = Math.min(-(q - gridSize), gridSize);
 
     let qIndex = CoordinateToIndex(q, gridSize);
-    hexGrid[qIndex] = new Array(gridSize);
+    hexGrid[qIndex] = new Array(ArraySizeFromGridSize(gridSize));
 
     for (let r = startIndex; r < endIndex + 1; r++){
       let rIndex = CoordinateToIndex(r, gridSize);
