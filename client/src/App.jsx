@@ -1,4 +1,14 @@
-import { Stage, Sprite} from '@pixi/react';
+class Hex 
+{
+    constructor(sprite, text)
+    {
+        this.sprite = sprite;
+        this.text = text;
+    }
+}
+
+import { Stage, Sprite, Text} from '@pixi/react';
+import { TextStyle } from 'pixi.js'
 
 //Convert one of your q or r values to it's corresponding grid index
 export function CoordinateToIndex(coordinate, gridSize) {
@@ -20,22 +30,36 @@ const DrawMap = (gridSize, xOffset, yOffset) => {
   var horizSpacing = 54;
   let hexGrid = new Array(ArraySizeFromGridSize(gridSize));
 
-  for (let q = -gridSize; q < gridSize + 1; q++){
-    let startIndex = -Math.min(q + gridSize, gridSize);
-    let endIndex = Math.min(-(q - gridSize), gridSize);
+  for (let r = -gridSize; r < gridSize + 1; r++){
+    let startIndex = -Math.min(r + gridSize, gridSize);
+    let endIndex = Math.min(-(r - gridSize), gridSize);
 
-    let qIndex = CoordinateToIndex(q, gridSize);
-    hexGrid[qIndex] = new Array(ArraySizeFromGridSize(gridSize));
+    let rIndex = CoordinateToIndex(r, gridSize);
+    hexGrid[rIndex] = new Array(ArraySizeFromGridSize(gridSize));
 
-    for (let r = startIndex; r < endIndex + 1; r++){
-      let rIndex = CoordinateToIndex(r, gridSize);
-      hexGrid[qIndex][rIndex] = (
+    for (let q = startIndex; q < endIndex + 1; q++){
+      let qIndex = CoordinateToIndex(q, gridSize);
+      hexGrid[rIndex][qIndex] = new Hex(
         <Sprite
-        image={"/Hex.svg"}
-        scale={{ x: 0.5, y: 0.5 }}
-        anchor={0.5}
-        x={xOffset + r * horizSpacing}
-        y={yOffset + (q + r/2) * gridSpacing}
+          image={"/Hex.svg"}
+          scale={{ x: 0.5, y: 0.5 }}
+          anchor={0.5}
+          x={xOffset + q * horizSpacing}
+          y={yOffset + (r + q/2) * gridSpacing}
+        />,
+        <Text
+          text= {"(" + q + ", " + r + ")"}
+          anchor={0.5}
+          x={xOffset + q * horizSpacing}
+          y={yOffset + (r + q/2) * gridSpacing}
+          style={
+            new TextStyle({
+              align: 'center',
+              fontFamily: '"Source Sans Pro", Helvetica, sans-serif',
+              fontSize: 10,
+              fontWeight: '10',
+            })
+          }
         />
       );
     }
@@ -47,11 +71,27 @@ const DrawMap = (gridSize, xOffset, yOffset) => {
 const App = () => {
   let width = 800;
   let height = 600;
+  const hexes = DrawMap(2, width/2, height/2);
+  const sprites = [];
+  const texts = [];
+
+  hexes.forEach(row => {
+      if (row) {
+          row.forEach(hex => {
+              if (hex) {
+                  sprites.push(hex.sprite);
+                  texts.push(hex.text);
+              }
+          });
+      }
+  });
+
   return (
     <div className='h-screen w-screen content-center'>
       <div className='flex justify-center'>
         <Stage width={width} height={height} options={{ background: 0x1e1e1e }}>
-          {DrawMap(2, width/2, height/2)}
+              {sprites}
+              {texts}
         </Stage>
       </div>
     </div>
