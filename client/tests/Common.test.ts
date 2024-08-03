@@ -1,36 +1,43 @@
 import {describe, test, it, expect} from "vitest"
-import { ArraySizeFromGridSize, CoordinateToIndex, IndexToCoordinate } from "../src/Common";
+import {HexAxialToScreen, HexScreenToAxial, RollDice, Vector2} from "../src/Common";
 
-describe('Array Size from Grid Size', () => {
-    it('should return n = gridSize * 2 + 1, that can be used to create an array with n elements', () => {
-        const gridSize : number = 3;
-        let arraySize : number = ArraySizeFromGridSize(gridSize);
+describe('Hex Axial to Screen', () => {
+    it('should return offset when given (0, 0) and (offset.x, offset.y - spacing.y) when given (0, -1)', () => {
+        const spacing : Vector2 = new Vector2(Math.random() - 0.5 * 20 , Math.random() - 0.5 * 20);
+        const offset : Vector2 = new Vector2(Math.random() - 0.5 * 200, Math.random() - 0.5 * 200);
+        let screen : Vector2 = HexAxialToScreen(new Vector2(0, 0), spacing, offset);
 
-        expect(arraySize).toBe(7);
+        expect(screen).toStrictEqual(new Vector2(offset.x, offset.y));
+
+        screen = HexAxialToScreen(new Vector2(0, -1), spacing, offset);
+
+        expect(screen).toStrictEqual(new Vector2(offset.x, offset.y - spacing.y));
     })
 })
 
-describe('Coordinate to Index', () => {
-    it('should return a range between 0 and gridSize * 2 + 1, that can be used to index an array dimension', () => {
-        const gridSize : number = 3;
-        for(let i : number = -gridSize; i < gridSize + 1; i++){
-            let index : number = CoordinateToIndex(i, gridSize);
+describe('Hex Screen to Axial', () => {
+    it('should return (0, 0) when given offset and (0, -1) when given (offset.x, offset.y - spacing.y)', () => {
+        const spacing : Vector2 = new Vector2(Math.random() - 0.5 * 20 , Math.random() - 0.5 * 20);
+        const offset : Vector2 = new Vector2(Math.random() - 0.5 * 200, Math.random() - 0.5 * 200);
+        let axial : Vector2 = HexScreenToAxial(offset, spacing, offset);
 
-            expect(index).toBeGreaterThanOrEqual(0);
-            expect(index).toBeLessThanOrEqual(gridSize * 2);
-        }
+        expect(axial.x).toBeCloseTo(0);
+        expect(axial.y).toBeCloseTo(0);
+
+        axial = HexScreenToAxial(new Vector2(offset.x, offset.y - spacing.y), spacing, offset);
+
+        expect(axial.x).toBeCloseTo(0);
+        expect(axial.y).toBeCloseTo(-1, 4);
     })
 })
 
-describe('Index to Coordinate', () => {
-    it('should return a range between -gridSize and gridSize + 1, that can be used as the q or r value', () => {
-        const gridSize : number = 3;
-        for (let i : number = -gridSize; i < gridSize + 1; i++){
-            let index : number = CoordinateToIndex(i, gridSize);
-            let q : number = IndexToCoordinate(index, gridSize);
+describe('Roll Dice', () => {
+    it('should return a number between 1 and 12', () => {
+        for(let i = 0; i < 10000; i++){
+            let num = RollDice();
 
-            expect(q).toBeGreaterThanOrEqual(-gridSize);
-            expect(q).toBeLessThanOrEqual(gridSize);
+            expect(num).toBeGreaterThanOrEqual(1);
+            expect(num).toBeLessThanOrEqual(12);
         }
     })
 })
