@@ -1,10 +1,11 @@
 import { Stage} from '@pixi/react';
 import { width, height, gridSize } from './Constants';
-import { HexAxialToIndex, ArraySizeFromGridSize, RollDice, Vector2, HexAxialToScreen, GetCorner, VertexScreenToAxial, VertexAxialToIndex} from './Common';
+import { HexAxialToIndex, ArraySizeFromGridSize, RollDice, HexAxialToScreen, GetCorner, VertexScreenToAxial, VertexAxialToIndex, HexAxialRound, HexScreenToAxial} from './Common';
 import {Hex, ResourceType, DisplayArguments, GridVertex, Vertex, SettlementData, SettlementLevel, PortData} from "./Map";
+import { Vector2 } from './Math';
 
 let hexGrid : Hex[][] = new Array(ArraySizeFromGridSize(gridSize));
-let vertexGrid : GridVertex[] = new Array(ArraySizeFromGridSize(gridSize) + 2);
+let vertexGrid : GridVertex[][] = new Array(ArraySizeFromGridSize(gridSize) + 4);
 let spacing : Vector2 = new Vector2(54, 60);
 let offset : Vector2 = new Vector2(width/2, height/2);
 
@@ -12,6 +13,11 @@ const InitializeHexGrid = () : Hex[][] => {
   //Initialize hex grid
   for(let i = 0; i < hexGrid.length; i++){
     hexGrid[i] = new Array(hexGrid.length);
+  }
+
+  //Initialized vertex grid
+  for(let i = 0; i < vertexGrid.length; i++){
+    vertexGrid[i] = new Array(vertexGrid.length);
   }
 
   for (let r : number = -gridSize; r < gridSize + 1; r++){
@@ -27,17 +33,20 @@ const InitializeHexGrid = () : Hex[][] => {
       let displayArguments = new DisplayArguments(axial, screen, "Hex.svg");
 
       //Create 6 vertices per hex
-      for(let i = 0; i < 6; i++){
+      for(let i = 0; i < 4; i++){
         let screenPosition : Vector2 = GetCorner(screen, i);
-        let vertexAxial : Vector2 = VertexScreenToAxial(screenPosition, spacing, offset, i);
-        let vertexQIndex : number = VertexAxialToIndex(vertexAxial.x, gridSize);
-        let vertexRIndex : number = VertexAxialToIndex(vertexAxial.y, gridSize);
-        let vertexDisplayArguments = new DisplayArguments(vertexAxial, screenPosition, "Circle.svg");
-        let settlementData = new SettlementData(0, SettlementLevel.NONE);
-        let portData = new PortData(ResourceType.NONE, 0);
+        //let vertexAxial : Vector2 = VertexScreenToAxial(screenPosition, spacing, offset, i);
+        //let vertexQIndex : number = VertexAxialToIndex(vertexAxial.x, gridSize);
+        //let vertexRIndex : number = VertexAxialToIndex(vertexAxial.y, gridSize);
+        //let vertexDisplayArguments = new DisplayArguments(vertexAxial, screenPosition, "Circle.svg");
+        //let settlementData = new SettlementData(0, SettlementLevel.NONE);
+        //let portData = new PortData(ResourceType.NONE, 0);
 
-        console.log(vertexAxial.x + ", " + vertexAxial.y + " " + axial.x + ", " + axial.y);
-        vertexGrid.push(new GridVertex(new Vertex(vertexDisplayArguments, settlementData, portData, i, axial), null));
+        //let vertex : Vertex = new Vertex(vertexDisplayArguments, settlementData, portData, i, axial);
+        //console.log(vertexAxial);
+        //console.log(axial);
+        //Every other vertex is west, first one is east
+        //vertexGrid[vertexRIndex][vertexQIndex]= new GridVertex(vertex, vertex);
       }
 
       hexGrid[rIndex][qIndex] = new Hex(
@@ -50,6 +59,11 @@ const InitializeHexGrid = () : Hex[][] => {
   }
 
   return hexGrid;
+}
+
+const onMouseMoved = (e : React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
+  let hexRounded : Vector2 = HexAxialRound(HexScreenToAxial(new Vector2(e.screenX, e.screenY), spacing, offset));
+  console.log(hexRounded);
 }
 
 const App = () => {
@@ -68,27 +82,29 @@ const App = () => {
       }
   });
 
-  vertexGrid.forEach((row : GridVertex | undefined) => {
+  vertexGrid.forEach((row : GridVertex[] | undefined) => {
     if(row){
-      //row.forEach((gridVertex : GridVertex | undefined) => {
-        //if(gridVertex){
-          if(row.top){
-            sprites.push(row.top.getSprite());
-            texts.push(row.top.getText());
+      row.forEach((gridVertex : GridVertex | undefined) => {
+        if(gridVertex){
+          if(gridVertex.east){
+            console.log("Rendering east");
+            sprites.push(gridVertex.east.getSprite());
+            texts.push(gridVertex.east.getText());
           }
-          if(row.bottom){
-            sprites.push(row.bottom.getSprite());
-            texts.push(row.bottom.getText());
+          if(gridVertex.west){
+            console.log("Rendering west");
+            sprites.push(gridVertex.west.getSprite());
+            texts.push(gridVertex.west.getText());
           }
-        //}
-      //})
+        }
+      })
     }
   })
 
   return (
     <div className='h-screen w-screen content-center'>
       <div className='flex justify-center'>
-        <Stage width={width} height={height} options={{ background: 0x1e1e1e }}>
+        <Stage width={width} height={height} options={{ background: 0xffffff }} onMouseMove={(e) => {onMouseMoved(e)}}>
             {sprites}
             {texts}
         </Stage>

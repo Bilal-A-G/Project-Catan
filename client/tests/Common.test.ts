@@ -1,5 +1,6 @@
 import {describe, test, it, expect} from "vitest"
-import {HexAxialToScreen, HexScreenToAxial, RollDice, Vector2} from "../src/Common";
+import {HexAxialToScreen, HexScreenToAxial, RollDice} from "../src/Common";
+import { Vector2 } from "../src/Math";
 
 describe('Hex Axial to Screen', () => {
     it('should return offset when given (0, 0) and (offset.x, offset.y - spacing.y) when given (0, -1)', () => {

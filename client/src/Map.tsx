@@ -1,6 +1,6 @@
 import {Sprite, Text} from '@pixi/react';
 import { TextStyle } from 'pixi.js'
-import {Vector2} from './Common'
+import {Vector2} from './Math'
 
 //Helper class to make it so any class that extends display base doesn't need to have a million things passed in
 //through their constructor
@@ -113,11 +113,11 @@ export class Hex extends DisplayBase{
 //Wrapper around the vertex class, used because some vertices will have the same axial coordinates, 
 //and therefore same array index
 export class GridVertex {
-    top : Vertex | null;
-    bottom : Vertex | null;
-    constructor(top : Vertex | null, bottom : Vertex | null){
-        this.top = top;
-        this.bottom = bottom;
+    west : Vertex | null;
+    east : Vertex | null;
+    constructor(west : Vertex | null, east : Vertex | null){
+        this.west = west;
+        this.east = east;
     }
 }
 
@@ -132,5 +132,9 @@ export class Vertex extends DisplayBase {
         this.portData = portData;
         this.i = i;
         this.centerAxial = centerAxial;
+    }
+
+    getTextString(): string {
+        return "";
     }
 }
