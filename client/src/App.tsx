@@ -1,13 +1,11 @@
 import { Stage} from '@pixi/react';
 import { width, height, gridSize, CalulateSCToDC} from './Constants';
-import { HexAxialToIndex, ArraySizeFromGridSize, RollDice, HexAxialToDC, GetCorner, VertexScreenToAxial, VertexAxialToIndex, HexAxialRound, HexScreenToAxial} from './Common';
+import { HexAxialToIndex, ArraySizeFromGridSize, RollDice, HexAxialToDC, GetCorner, VertexScreenToAxial, VertexAxialToIndex, HexAxialRound, HexDCToAxial} from './Common';
 import {Hex, ResourceType, DisplayArguments, GridVertex, Vertex, SettlementData, SettlementLevel, PortData} from "./Map";
 import {Matrix3x3, Vector3 } from './Math';
 
 let hexGrid : Hex[][] = new Array(ArraySizeFromGridSize(gridSize));
 let vertexGrid : GridVertex[][] = new Array(ArraySizeFromGridSize(gridSize) + 4);
-let spacing : Vector3 = new Vector3(54, 60);
-let offset : Vector3 = new Vector3(width/2, height/2);
 
 const InitializeHexGrid = () : Hex[][] => {
   //Initialize hex grid
@@ -31,7 +29,7 @@ const InitializeHexGrid = () : Hex[][] => {
       let axial = new Vector3(q, r);
       let dc = HexAxialToDC(axial);
       let displayArguments = new DisplayArguments(axial, dc, "Hex.svg");
-
+      
       //Create 6 vertices per hex
       for(let i = 0; i < 4; i++){
         let screenPosition : Vector3 = GetCorner(dc, i);

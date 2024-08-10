@@ -21,13 +21,13 @@ export function HexAxialRound(axial : Vector3) : Vector3{
     return new Vector3(finalRoundedAxial.x - 1, finalRoundedAxial.y - 3);
 }
 
-//Convert screen space coordinates to q and r axial coordinates
-export function HexScreenToAxial(screen : Vector3) : Vector3 | null{
+//Convert device coordinates to q and r axial coordinates
+export function HexDCToAxial(dc : Vector3) : Vector3 | null{
     let inverseMat : Matrix3x3 | null = Matrix3x3.Inverse(hexAxialToDC);
     if(inverseMat == null){
         return null;
     }
-    return Matrix3x3.MultiplyVec(inverseMat, screen);
+    return Matrix3x3.MultiplyVec(inverseMat, dc);
 }
 
 //Convert q and r values to device coordinates
@@ -75,7 +75,7 @@ export function GetVertexAxialOffsetFromI(i : number) : Vector3{
 
 //Convert vertex screen space coordinates to q and r coordinates
 export function VertexScreenToAxial(screen : Vector3, i : number) : Vector3 | null{
-    let hexAxial : Vector3 | null = HexScreenToAxial(screen);
+    let hexAxial : Vector3 | null = HexDCToAxial(screen);
     if (hexAxial == null){
         return null;
     }
