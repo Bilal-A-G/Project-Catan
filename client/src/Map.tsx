@@ -1,15 +1,15 @@
 import {Sprite, Text} from '@pixi/react';
 import { TextStyle } from 'pixi.js'
-import {Vector2} from './Math'
+import {Vector3} from './Math'
 
 //Helper class to make it so any class that extends display base doesn't need to have a million things passed in
 //through their constructor
 export class DisplayArguments {
-    axialCoordinates : Vector2;
-    screenCoordinates : Vector2;
+    axialCoordinates : Vector3;
+    screenCoordinates : Vector3;
     imageName : string;
 
-    constructor(axialCoordinates : Vector2, screenCoordinates : Vector2, imageName : string){
+    constructor(axialCoordinates : Vector3, screenCoordinates : Vector3, imageName : string){
         this.axialCoordinates = axialCoordinates;
         this.screenCoordinates = screenCoordinates;
         this.imageName = imageName;
@@ -125,7 +125,7 @@ export class Vertex extends DisplayBase {
     settlementData : SettlementData;
     portData : PortData;
     i : number;
-    centerAxial : Vector2;
+    centerAxial : Vector3;
     constructor(displayArguments : DisplayArguments, settlementData : SettlementData, portData : PortData, i : number, centerAxial : Vector2){
         super(displayArguments);
         this.settlementData = settlementData;

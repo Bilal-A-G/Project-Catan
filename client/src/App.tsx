@@ -1,13 +1,13 @@
 import { Stage} from '@pixi/react';
-import { width, height, gridSize } from './Constants';
+import { width, height, gridSize, CalulateScreenToDCMat} from './Constants';
 import { HexAxialToIndex, ArraySizeFromGridSize, RollDice, HexAxialToScreen, GetCorner, VertexScreenToAxial, VertexAxialToIndex, HexAxialRound, HexScreenToAxial} from './Common';
 import {Hex, ResourceType, DisplayArguments, GridVertex, Vertex, SettlementData, SettlementLevel, PortData} from "./Map";
-import { Vector2 } from './Math';
+import {Matrix3x3, Vector3 } from './Math';
 
 let hexGrid : Hex[][] = new Array(ArraySizeFromGridSize(gridSize));
 let vertexGrid : GridVertex[][] = new Array(ArraySizeFromGridSize(gridSize) + 4);
-let spacing : Vector2 = new Vector2(54, 60);
-let offset : Vector2 = new Vector2(width/2, height/2);
+let spacing : Vector3 = new Vector3(54, 60);
+let offset : Vector3 = new Vector3(width/2, height/2);
 
 const InitializeHexGrid = () : Hex[][] => {
   //Initialize hex grid
@@ -28,13 +28,13 @@ const InitializeHexGrid = () : Hex[][] => {
     for (let q : number = startIndex; q < endIndex + 1; q++){
       let qIndex : number = HexAxialToIndex(q, gridSize);
       let diceRoll : number = RollDice();
-      let axial = new Vector2(q, r);
-      let screen = HexAxialToScreen(axial, spacing, offset);
+      let axial = new Vector3(q, r);
+      let screen = HexAxialToScreen(axial, offset);
       let displayArguments = new DisplayArguments(axial, screen, "Hex.svg");
 
       //Create 6 vertices per hex
       for(let i = 0; i < 4; i++){
-        let screenPosition : Vector2 = GetCorner(screen, i);
+        let screenPosition : Vector3 = GetCorner(screen, i);
         //let vertexAxial : Vector2 = VertexScreenToAxial(screenPosition, spacing, offset, i);
         //let vertexQIndex : number = VertexAxialToIndex(vertexAxial.x, gridSize);
         //let vertexRIndex : number = VertexAxialToIndex(vertexAxial.y, gridSize);
@@ -62,8 +62,9 @@ const InitializeHexGrid = () : Hex[][] => {
 }
 
 const onMouseMoved = (e : React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
-  let hexRounded : Vector2 = HexAxialRound(HexScreenToAxial(new Vector2(e.screenX, e.screenY), spacing, offset));
-  console.log(hexRounded);
+  let matrix : Matrix3x3 = CalulateScreenToDCMat();
+  let NDCMouse : Vector3 = Matrix3x3.MultiplyVec(matrix, new Vector3(e.clientX, e.clientY));
+  console.log(NDCMouse);
 }
 
 const App = () => {
@@ -104,7 +105,7 @@ const App = () => {
   return (
     <div className='h-screen w-screen content-center'>
       <div className='flex justify-center'>
-        <Stage width={width} height={height} options={{ background: 0xffffff }} onMouseMove={(e) => {onMouseMoved(e)}}>
+        <Stage width={width} height={height} options={{ background: 0x00000 }} onMouseMove={(e) => {onMouseMoved(e)}}>
             {sprites}
             {texts}
         </Stage>

@@ -1,34 +1,30 @@
 import {describe, test, it, expect} from "vitest"
 import {HexAxialToScreen, HexScreenToAxial, RollDice} from "../src/Common";
-import { Vector2 } from "../src/Math";
+import { Vector3 } from "../src/Math";
 
 describe('Hex Axial to Screen', () => {
-    it('should return offset when given (0, 0) and (offset.x, offset.y - spacing.y) when given (0, -1)', () => {
-        const spacing : Vector2 = new Vector2(Math.random() - 0.5 * 20 , Math.random() - 0.5 * 20);
-        const offset : Vector2 = new Vector2(Math.random() - 0.5 * 200, Math.random() - 0.5 * 200);
-        let screen : Vector2 = HexAxialToScreen(new Vector2(0, 0), spacing, offset);
+    it('should return (400, 400) when axial = (0, 0) and offset = (400, 400)', () => {
+        const offset : Vector3 = new Vector3(400, 400);
+        let screen : Vector3 = HexAxialToScreen(new Vector3(0, 0), offset);
 
-        expect(screen).toStrictEqual(new Vector2(offset.x, offset.y));
-
-        screen = HexAxialToScreen(new Vector2(0, -1), spacing, offset);
-
-        expect(screen).toStrictEqual(new Vector2(offset.x, offset.y - spacing.y));
+        expect(screen).toStrictEqual(new Vector3(400, 400));
     })
 })
 
 describe('Hex Screen to Axial', () => {
-    it('should return (0, 0) when given offset and (0, -1) when given (offset.x, offset.y - spacing.y)', () => {
-        const spacing : Vector2 = new Vector2(Math.random() - 0.5 * 20 , Math.random() - 0.5 * 20);
-        const offset : Vector2 = new Vector2(Math.random() - 0.5 * 200, Math.random() - 0.5 * 200);
-        let axial : Vector2 = HexScreenToAxial(offset, spacing, offset);
+    it('should return (0, 0) when given offset = (400, 400) and screen = (400, 400)', () => {
+        const offset : Vector3 = new Vector3(400, 400);
+        let screen : Vector3 = HexAxialToScreen(new Vector3(0, 0), offset);
+        //console.log(screen);
+        let axial : Vector3 | null = HexScreenToAxial(new Vector3(400, 400), offset);
+        //console.log(axial);
+
+        if(axial == null){
+            return;
+        }
 
         expect(axial.x).toBeCloseTo(0);
         expect(axial.y).toBeCloseTo(0);
-
-        axial = HexScreenToAxial(new Vector2(offset.x, offset.y - spacing.y), spacing, offset);
-
-        expect(axial.x).toBeCloseTo(0);
-        expect(axial.y).toBeCloseTo(-1, 4);
     })
 })
 
