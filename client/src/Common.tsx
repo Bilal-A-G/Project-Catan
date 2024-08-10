@@ -1,4 +1,4 @@
-import { width, height, hexSize, hexAxialToScreen} from "./Constants";
+import { width, height, hexSize, hexAxialToDC} from "./Constants";
 import { Matrix3x3, Vector3 } from "./Math";
 
 //-----------------------------------Hex axial - screen and vice versa conversions -------------------------------//
@@ -22,19 +22,17 @@ export function HexAxialRound(axial : Vector3) : Vector3{
 }
 
 //Convert screen space coordinates to q and r axial coordinates
-export function HexScreenToAxial(screen : Vector3, offset : Vector3) : Vector3 | null{
-    let inverseMat : Matrix3x3 | null = Matrix3x3.Inverse(hexAxialToScreen);
+export function HexScreenToAxial(screen : Vector3) : Vector3 | null{
+    let inverseMat : Matrix3x3 | null = Matrix3x3.Inverse(hexAxialToDC);
     if(inverseMat == null){
         return null;
     }
-    let rawAxial : Vector3 = Matrix3x3.MultiplyVec(inverseMat, screen);
-    return new Vector3(rawAxial.x - offset.x, rawAxial.y - offset.y);
+    return Matrix3x3.MultiplyVec(inverseMat, screen);
 }
 
-//Convert q and r values to screen space coordinates
-export function HexAxialToScreen(axial : Vector3, offset : Vector3) : Vector3 {
-    let rawScreen : Vector3 = Matrix3x3.MultiplyVec(hexAxialToScreen, axial);
-    return new Vector3(rawScreen.x + offset.x, rawScreen.y + offset.y);
+//Convert q and r values to device coordinates
+export function HexAxialToDC(axial : Vector3) : Vector3 {
+    return Matrix3x3.MultiplyVec(hexAxialToDC, axial);
 }
 
 //Convert one of your q or r values to it's corresponding grid index
@@ -76,8 +74,8 @@ export function GetVertexAxialOffsetFromI(i : number) : Vector3{
 }
 
 //Convert vertex screen space coordinates to q and r coordinates
-export function VertexScreenToAxial(screen : Vector3, spacing : Vector3, offset : Vector3, i : number) : Vector3 | null{
-    let hexAxial : Vector3 | null = HexScreenToAxial(screen, offset);
+export function VertexScreenToAxial(screen : Vector3, i : number) : Vector3 | null{
+    let hexAxial : Vector3 | null = HexScreenToAxial(screen);
     if (hexAxial == null){
         return null;
     }

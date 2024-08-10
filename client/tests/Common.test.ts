@@ -1,11 +1,10 @@
 import {describe, test, it, expect} from "vitest"
-import {HexAxialToScreen, HexScreenToAxial, RollDice} from "../src/Common";
+import {HexAxialToDC, HexScreenToAxial, RollDice} from "../src/Common";
 import { Vector3 } from "../src/Math";
 
-describe('Hex Axial to Screen', () => {
+describe('Hex Axial to DC', () => {
     it('should return (400, 400) when axial = (0, 0) and offset = (400, 400)', () => {
-        const offset : Vector3 = new Vector3(400, 400);
-        let screen : Vector3 = HexAxialToScreen(new Vector3(0, 0), offset);
+        let screen : Vector3 = HexAxialToDC(new Vector3(0, 0));
 
         expect(screen).toStrictEqual(new Vector3(400, 400));
     })
@@ -13,10 +12,7 @@ describe('Hex Axial to Screen', () => {
 
 describe('Hex Screen to Axial', () => {
     it('should return (0, 0) when given offset = (400, 400) and screen = (400, 400)', () => {
-        const offset : Vector3 = new Vector3(400, 400);
-        let screen : Vector3 = HexAxialToScreen(new Vector3(0, 0), offset);
-        //console.log(screen);
-        let axial : Vector3 | null = HexScreenToAxial(new Vector3(400, 400), offset);
+        let axial : Vector3 | null = HexScreenToAxial(new Vector3(400, 400));
         //console.log(axial);
 
         if(axial == null){

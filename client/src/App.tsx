@@ -1,6 +1,6 @@
 import { Stage} from '@pixi/react';
-import { width, height, gridSize, CalulateScreenToDCMat} from './Constants';
-import { HexAxialToIndex, ArraySizeFromGridSize, RollDice, HexAxialToScreen, GetCorner, VertexScreenToAxial, VertexAxialToIndex, HexAxialRound, HexScreenToAxial} from './Common';
+import { width, height, gridSize, CalulateSCToDC} from './Constants';
+import { HexAxialToIndex, ArraySizeFromGridSize, RollDice, HexAxialToDC, GetCorner, VertexScreenToAxial, VertexAxialToIndex, HexAxialRound, HexScreenToAxial} from './Common';
 import {Hex, ResourceType, DisplayArguments, GridVertex, Vertex, SettlementData, SettlementLevel, PortData} from "./Map";
 import {Matrix3x3, Vector3 } from './Math';
 
@@ -29,12 +29,12 @@ const InitializeHexGrid = () : Hex[][] => {
       let qIndex : number = HexAxialToIndex(q, gridSize);
       let diceRoll : number = RollDice();
       let axial = new Vector3(q, r);
-      let screen = HexAxialToScreen(axial, offset);
-      let displayArguments = new DisplayArguments(axial, screen, "Hex.svg");
+      let dc = HexAxialToDC(axial);
+      let displayArguments = new DisplayArguments(axial, dc, "Hex.svg");
 
       //Create 6 vertices per hex
       for(let i = 0; i < 4; i++){
-        let screenPosition : Vector3 = GetCorner(screen, i);
+        let screenPosition : Vector3 = GetCorner(dc, i);
         //let vertexAxial : Vector2 = VertexScreenToAxial(screenPosition, spacing, offset, i);
         //let vertexQIndex : number = VertexAxialToIndex(vertexAxial.x, gridSize);
         //let vertexRIndex : number = VertexAxialToIndex(vertexAxial.y, gridSize);
@@ -62,9 +62,13 @@ const InitializeHexGrid = () : Hex[][] => {
 }
 
 const onMouseMoved = (e : React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
-  let matrix : Matrix3x3 = CalulateScreenToDCMat();
+  let matrix : Matrix3x3 = CalulateSCToDC();
   let NDCMouse : Vector3 = Matrix3x3.MultiplyVec(matrix, new Vector3(e.clientX, e.clientY));
-  console.log(NDCMouse);
+  let inverseMatrix : Matrix3x3 | null = Matrix3x3.Inverse(matrix);
+  if(inverseMatrix == null){
+    return;
+  }
+  let screenMouse : Vector3 = Matrix3x3.MultiplyVec(inverseMatrix, NDCMouse);
 }
 
 const App = () => {
@@ -76,25 +80,35 @@ const App = () => {
       if (row) {
           row.forEach((hex : Hex | undefined) => {
               if (hex) {
-                  sprites.push(hex.getSprite());
+                  let sprite : JSX.Element | null = hex.getSprite();
+                  if (sprite != null){
+                    sprites.push(sprite);
+                  }
                   texts.push(hex.getText());
               }
           });
       }
   });
 
+  //TODO refactor, remove code duplication
   vertexGrid.forEach((row : GridVertex[] | undefined) => {
     if(row){
       row.forEach((gridVertex : GridVertex | undefined) => {
         if(gridVertex){
           if(gridVertex.east){
             console.log("Rendering east");
-            sprites.push(gridVertex.east.getSprite());
+            let sprite : JSX.Element | null = gridVertex.east.getSprite();
+            if(sprite != null){
+              sprites.push(sprite);
+            }
             texts.push(gridVertex.east.getText());
           }
           if(gridVertex.west){
             console.log("Rendering west");
-            sprites.push(gridVertex.west.getSprite());
+            let sprite : JSX.Element | null = gridVertex.west.getSprite();
+            if(sprite != null){
+              sprites.push(sprite);
+            }
             texts.push(gridVertex.west.getText());
           }
         }

@@ -1,17 +1,18 @@
 import {Sprite, Text} from '@pixi/react';
 import { TextStyle } from 'pixi.js'
-import {Vector3} from './Math'
+import {Matrix3x3, Vector3} from './Math'
+import {DCToCC } from './Constants';
 
 //Helper class to make it so any class that extends display base doesn't need to have a million things passed in
 //through their constructor
 export class DisplayArguments {
     axialCoordinates : Vector3;
-    screenCoordinates : Vector3;
+    deviceCoordinates : Vector3;
     imageName : string;
 
-    constructor(axialCoordinates : Vector3, screenCoordinates : Vector3, imageName : string){
+    constructor(axialCoordinates : Vector3, deviceCoordinates : Vector3, imageName : string){
         this.axialCoordinates = axialCoordinates;
-        this.screenCoordinates = screenCoordinates;
+        this.deviceCoordinates = deviceCoordinates;
         this.imageName = imageName;
     }
 }
@@ -24,14 +25,15 @@ class DisplayBase{
         this.displayArguments = displayArguments;
     }
 
-    getSprite() : JSX.Element {
+    getSprite() : JSX.Element | null {
+        let canvasCoordinates : Vector3 = Matrix3x3.MultiplyVec(DCToCC, this.displayArguments.deviceCoordinates);
         return(
             <Sprite
             image={"/" + this.displayArguments.imageName}
             scale={{ x: 0.5, y: 0.5 }}
             anchor={0.5}
-            x={this.displayArguments.screenCoordinates.x}
-            y={this.displayArguments.screenCoordinates.y}
+            x={canvasCoordinates.x}
+            y={canvasCoordinates.y}
           />
         );
     }
@@ -42,12 +44,13 @@ class DisplayBase{
     }
 
     getText() : JSX.Element {
+        let canvasCoordinates : Vector3 = Matrix3x3.MultiplyVec(DCToCC, this.displayArguments.deviceCoordinates);
         return(
             <Text
             text= {this.getTextString()}
             anchor={0.5}
-            x={this.displayArguments.screenCoordinates.x}
-            y={this.displayArguments.screenCoordinates.y}
+            x={canvasCoordinates.x}
+            y={canvasCoordinates.y}
             style={
               new TextStyle({
                 align: 'center',
@@ -126,7 +129,7 @@ export class Vertex extends DisplayBase {
     portData : PortData;
     i : number;
     centerAxial : Vector3;
-    constructor(displayArguments : DisplayArguments, settlementData : SettlementData, portData : PortData, i : number, centerAxial : Vector2){
+    constructor(displayArguments : DisplayArguments, settlementData : SettlementData, portData : PortData, i : number, centerAxial : Vector3){
         super(displayArguments);
         this.settlementData = settlementData;
         this.portData = portData;
