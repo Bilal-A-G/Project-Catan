@@ -9,11 +9,13 @@ export class DisplayArguments {
     axialCoordinates : Vector3;
     deviceCoordinates : Vector3;
     imageName : string;
+    rotation : number;
 
-    constructor(axialCoordinates : Vector3, deviceCoordinates : Vector3, imageName : string){
+    constructor(axialCoordinates : Vector3, deviceCoordinates : Vector3, imageName : string, rotation : number = 0){
         this.axialCoordinates = axialCoordinates;
         this.deviceCoordinates = deviceCoordinates;
         this.imageName = imageName;
+        this.rotation = rotation;
     }
 }
 
@@ -32,6 +34,7 @@ class DisplayBase{
             image={"/" + this.displayArguments.imageName}
             scale={{ x: 0.5, y: 0.5 }}
             anchor={0.5}
+            rotation={this.displayArguments.rotation}
             x={canvasCoordinates.x}
             y={canvasCoordinates.y}
           />
@@ -109,7 +112,7 @@ export class Hex extends DisplayBase{
     }
 
     getTextString(): string {
-        return super.getTextString() + " " + this.diceNumber;
+        return "*" ;
     }
 }
 

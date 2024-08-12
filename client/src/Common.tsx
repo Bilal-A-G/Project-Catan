@@ -18,7 +18,7 @@ export function HexAxialRound(axial : Vector3) : Vector3{
         finalRoundedAxial.y = rounded.y + Math.round(remainder.y + 0.5 * remainder.x);
     }
 
-    return new Vector3(finalRoundedAxial.x - 1, finalRoundedAxial.y - 3);
+    return new Vector3(finalRoundedAxial.x, finalRoundedAxial.y);
 }
 
 //Convert device coordinates to q and r axial coordinates
@@ -79,14 +79,14 @@ export function VertexScreenToAxial(screen : Vector3, i : number) : Vector3 | nu
     if (hexAxial == null){
         return null;
     }
-    let centerHexAxial : Vector3 | null = HexAxialRound(hexAxial);
+    let centerHexAxial : Vector3 = HexAxialRound(hexAxial);
     let axialOffset : Vector3 = GetVertexAxialOffsetFromI(i);
 
     return new Vector3(centerHexAxial.x + axialOffset.x, centerHexAxial.y + axialOffset.y);
 }
 
 export function VertexAxialToIndex(axial : number, gridSize : number) : number {
-    return axial + gridSize + 2;
+    return axial + gridSize + 1;
 }
 //-----------------------------------End of Vertex axial - screen and vice versa conversions -------------------------------//
   
