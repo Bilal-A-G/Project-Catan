@@ -1,19 +1,16 @@
 import {Sprite, Text} from '@pixi/react';
 import { TextStyle } from 'pixi.js'
-import {Matrix3x3, Vector3} from './Math'
-import {DCToCC } from './Constants';
+import {Vector3} from './Math'
 
 //Helper class to make it so any class that extends display base doesn't need to have a million things passed in
 //through their constructor
 export class DisplayArguments {
-    axialCoordinates : Vector3;
-    deviceCoordinates : Vector3;
+    position : Vector3;
     imageName : string;
     rotation : number;
 
-    constructor(axialCoordinates : Vector3, deviceCoordinates : Vector3, imageName : string, rotation : number = 0){
-        this.axialCoordinates = axialCoordinates;
-        this.deviceCoordinates = deviceCoordinates;
+    constructor(position : Vector3, imageName : string, rotation : number = 0){
+        this.position = position;
         this.imageName = imageName;
         this.rotation = rotation;
     }
@@ -28,32 +25,30 @@ class DisplayBase{
     }
 
     getSprite() : JSX.Element | null {
-        let canvasCoordinates : Vector3 = Matrix3x3.MultiplyVec(DCToCC, this.displayArguments.deviceCoordinates);
         return(
             <Sprite
             image={"/" + this.displayArguments.imageName}
             scale={{ x: 0.5, y: 0.5 }}
             anchor={0.5}
             rotation={this.displayArguments.rotation}
-            x={canvasCoordinates.x}
-            y={canvasCoordinates.y}
+            x={this.displayArguments.position.x}
+            y={this.displayArguments.position.y}
           />
         );
     }
 
     //Override in other classes by redeclaring to change the text returned by the getText() function
     getTextString() : string {
-        return "(" + this.displayArguments.axialCoordinates.x + ", " + this.displayArguments.axialCoordinates.y + ")";
+        return "(" + this.displayArguments.position.x + ", " + this.displayArguments.position.y + ")";
     }
 
     getText() : JSX.Element {
-        let canvasCoordinates : Vector3 = Matrix3x3.MultiplyVec(DCToCC, this.displayArguments.deviceCoordinates);
         return(
             <Text
             text= {this.getTextString()}
             anchor={0.5}
-            x={canvasCoordinates.x}
-            y={canvasCoordinates.y}
+            x={this.displayArguments.position.x}
+            y={this.displayArguments.position.y}
             style={
               new TextStyle({
                 align: 'center',
@@ -116,31 +111,17 @@ export class Hex extends DisplayBase{
     }
 }
 
-//Wrapper around the vertex class, used because some vertices will have the same axial coordinates, 
-//and therefore same array index
-export class GridVertex {
-    west : Vertex | null;
-    east : Vertex | null;
-    constructor(west : Vertex | null, east : Vertex | null){
-        this.west = west;
-        this.east = east;
-    }
-}
-
 export class Vertex extends DisplayBase {
     settlementData : SettlementData;
     portData : PortData;
-    i : number;
-    centerAxial : Vector3;
-    constructor(displayArguments : DisplayArguments, settlementData : SettlementData, portData : PortData, i : number, centerAxial : Vector3){
+
+    constructor(displayArguments : DisplayArguments, settlementData : SettlementData, portData : PortData){
         super(displayArguments);
         this.settlementData = settlementData;
         this.portData = portData;
-        this.i = i;
-        this.centerAxial = centerAxial;
     }
 
     getTextString(): string {
-        return "";
+        return "*";
     }
 }
