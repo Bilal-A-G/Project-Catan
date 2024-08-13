@@ -7,7 +7,7 @@ import {Vector3 } from './Math';
 let hexGrid : Hex[] = new Array();
 let vertexGrid : Vertex[] = new Array();
 
-let offset : Vector3 = new Vector3(400, 300);
+let offset : Vector3 = new Vector3(260, 400);
 
 const InitializeHexGrid = () => {
   for (let r : number = -gridSize; r < gridSize + 1; r++){
@@ -16,7 +16,9 @@ const InitializeHexGrid = () => {
 
     for (let q : number = startIndex; q < endIndex + 1; q++){
       let diceRoll : number = RollDice();
-      let hexPosition = new Vector3((q * 3/2 + r * Math.sqrt(3)/2) * hexSize + offset.x, (r * Math.sqrt(3) * hexSize) + offset.y);
+      let dcX : number = (q * 3/2 * 1.15 + r * Math.sqrt(3)/2) * hexSize + offset.x;
+      let dcY : number = (r * Math.sqrt(3) * hexSize * 0.85) + offset.y;
+      let hexPosition = new Vector3(dcY, dcX);
       let displayArguments = new DisplayArguments(hexPosition, "Hex.svg");
       
       hexGrid.push(new Hex(
