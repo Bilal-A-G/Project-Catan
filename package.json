@@ -3,14 +3,15 @@
   "scripts": {
     "test": "npx jest",
     "lint": "npx eslint",
+    "validate": "npx run test && npx run lint",
 
-    "build:dev": "webpack --mode=development",
-    "build:prod": "npm run lint && npm run webpack --mode=production --node-env=production",
+    "build:dev": "npx run webpack --mode=development",
+    "build:prod": "npx run webpack --mode=production --node-env=production",
 
     "webpack": "npx webpack serve --hot",
 
-    "dev:c": "npm run lint && npm run webpack",
-    "dev:f": "npm run webpack"
+    "dev:c": "npx run validate && npx run webpack",
+    "dev:f": "npx run webpack"
   },
   "dependencies": {
     "ejs": "^3.1.10",
