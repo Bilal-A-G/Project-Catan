@@ -11,5 +11,5 @@ jobs:
       - name: Build and push image
         run: |
           docker login --username bilal-a-g --password ${{secrets.GH_TOKEN}} ghcr.io
-          docker build . --t ghcr.io/bilal-a-g/catan-frontend:latest
+          docker build . --tag ghcr.io/bilal-a-g/catan-frontend:latest
           docker push ghcr.io/bilal-a-g/catan-frontend:latest
