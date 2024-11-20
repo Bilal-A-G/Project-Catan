@@ -5,7 +5,7 @@
     "lint": "npx eslint",
 
     "build:dev": "webpack --mode=development",
-    "build:prod": "webpack --mode=production --node-env=production",
+    "build:prod": "npm run lint && npm run webpack --mode=production --node-env=production",
 
     "webpack": "npx webpack serve --hot",
 
