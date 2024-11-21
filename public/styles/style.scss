@@ -1,0 +1,10 @@
+.parent{
+    background-color: rgb(26, 24, 24);
+}
+
+.header{
+    @extend .parent;
+    color: white;
+    text-align: center;
+    padding-left: 5%;
+}
