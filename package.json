@@ -4,13 +4,10 @@
     "test": "npx jest",
     "lint": "npx eslint",
     "validate": "npm run test && npm run lint",
-
-    "build:dev": "webpack --mode=development",
-    "build:prod": "webpack --mode=production --node-env=production",
-
+    "build:dev": "webpack",
+    "build:prod": "webpack --node-env=production",
     "webpack": "npx webpack serve --hot",
-
-    "dev:c": "npm run validate && npm run webpack",
+    "dev:c": "npx webpack serve --hot --node-env=clean",
     "dev:f": "npm run webpack"
   },
   "dependencies": {
